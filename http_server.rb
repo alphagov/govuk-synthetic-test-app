@@ -4,9 +4,9 @@ require 'socket'
 logger = Logger.new(STDOUT)
 server = TCPServer.new 5678
 install_id = Time.now.to_i
-helm_message = ENV['HELM_MESSAGE'] || 'default_helm_message'
+helm_message = ENV['HELM_MESSAGE'] || 'missing_helm_message'
 
-logger.info("From helm chart - #{helm_message}")
+logger.info("#{install_id} - from helm chart - #{helm_message}")
 
 Dir['messages/*'].each do |filename|
     file = File.open(filename)
