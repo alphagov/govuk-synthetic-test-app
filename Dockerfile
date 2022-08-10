@@ -6,6 +6,9 @@ COPY ./ /srv/app
 
 RUN bundle install
 
-CMD ruby http_server.rb
+# CMD ruby http_server.rb
+# EXPOSE 5678
 
-EXPOSE 5678
+EXPOSE 9292
+
+CMD rackup -o 0.0.0.0
