@@ -22,13 +22,20 @@ while session = server.accept
   path, query = full_path.split('?')
 
   logger.info("#{install_id} - #{full_path}")
-
-  qs = Rack::Utils.parse_nested_query query
- 
-  session.print "HTTP/1.1 #{qs["status"] || "400"}\r\n"
-  session.print "Content-Type: text/html\r\n"
-  session.print "\r\n"
-  session.print "Hello #{install_id}! The time is #{Time.now}, you requested a #{qs["status"]} status response"
- 
+  
+  if path == "/healthcheck/ready"
+    session.print "HTTP/1.1 200\r\n"
+    session.print "Content-Type: text/html\r\n"
+    session.print "\r\n"
+    session.print "Hello #{install_id}! The time is #{Time.now}, health check done"
+  else
+    qs = Rack::Utils.parse_nested_query query
+   
+    session.print "HTTP/1.1 #{qs["status"] || "400"}\r\n"
+    session.print "Content-Type: text/html\r\n"
+    session.print "\r\n"
+    session.print "Hello #{install_id}! The time is #{Time.now}, you requested a #{qs["status"]} status response"
+  end
+  
   session.close
 end
