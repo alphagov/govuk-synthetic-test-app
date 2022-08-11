@@ -1,14 +1,11 @@
 FROM ruby:3.0.4
 
-WORKDIR /srv/app
+WORKDIR /app
 
-COPY ./ /srv/app
+COPY ./ /app
 
 RUN bundle install
 
-# CMD ruby http_server.rb
-# EXPOSE 5678
-
-EXPOSE 9292
+EXPOSE 9292 9394
 
 CMD rackup -o 0.0.0.0
