@@ -20,7 +20,7 @@ class RackApp
     body = ""
     status = 200
 
-    if path == "/healthcheck/ready" || path == "/readyz"
+    if path == "/healthcheck/live" || path == "/healthcheck/ready" || path == "/readyz"
       if !req.head?
           body = "Hello #{$install_id}! The time is #{Time.now}, health check done"
       end
