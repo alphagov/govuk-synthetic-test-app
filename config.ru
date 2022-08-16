@@ -9,8 +9,9 @@ $counter = PrometheusExporter::Metric::Counter.new("http_requests_total", "total
 server.collector.register_metric($counter)
 
 $install_id = Time.now.to_i
+helm_message = ENV['HELM_MESSAGE'] || 'missing_helm_message'
 
-puts "#{$install_id} - rackup"
+puts("GOVUK replatform test app - #{$install_id} - from helm chart - #{helm_message}")
 
 class RackApp    
   def call(env)
