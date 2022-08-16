@@ -13,6 +13,13 @@ helm_message = ENV['HELM_MESSAGE'] || 'missing_helm_message'
 
 puts("GOVUK replatform test app - #{$install_id} - from helm chart - #{helm_message}")
 
+Dir['messages/*'].each do |filename|
+    file = File.open(filename)
+    filedata = file.read
+    file.close
+    puts("#{$install_id} - #{filedata}")
+end
+
 class RackApp    
   def call(env)
     req = Rack::Request.new(env)
@@ -35,7 +42,7 @@ class RackApp
       end
     end
     [status, {"Content-Type" => "text/plain"}, [body]]
-end
+  end
 end
 
 run RackApp.new

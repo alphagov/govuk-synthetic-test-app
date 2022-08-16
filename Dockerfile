@@ -4,6 +4,8 @@ WORKDIR /app
 
 COPY ./ /app
 
+ENV HELM_MESSAGE="from dockerfile"
+
 RUN bundle install
 
 EXPOSE 9292 9394
