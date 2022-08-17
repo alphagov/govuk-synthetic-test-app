@@ -33,10 +33,10 @@ class RackApp
           body = "Hello #{$install_id}! The time is #{Time.now}, health check done"
       end
     else
-      $counter.observe(1, route: '/')
-
       qs = Rack::Utils.parse_nested_query query
       status = qs["status"] || 400
+      $counter.observe(1, route: '/', status: status, install_id: $install_id)
+
       if !req.head?
         body = "Hello #{$install_id}! The time is #{Time.now}, you requested a #{qs["status"]} status response"
       end
