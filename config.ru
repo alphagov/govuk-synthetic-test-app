@@ -6,7 +6,10 @@ server = PrometheusExporter::Server::WebServer.new bind: "0.0.0.0", port: 9394
 server.start
 
 $counter = PrometheusExporter::Metric::Counter.new("http_requests_total", "total number of web requests")
+$http_request_duration_seconds = PrometheusExporter::Metric::Summary.new("http_request_duration_seconds", "time it took to complete a request", quantiles: [0.01, 0.1, 0.5, 0.9, 0.99])
+
 server.collector.register_metric($counter)
+server.collector.register_metric($http_request_duration_seconds)
 
 $install_id = Time.now.to_i
 helm_message = ENV['HELM_MESSAGE'] || 'missing_helm_message'
@@ -22,6 +25,8 @@ end
 
 class RackApp    
   def call(env)
+    start = Time.now.to_f
+
     req = Rack::Request.new(env)
     path, query = req.fullpath.split('?')
 
@@ -35,11 +40,15 @@ class RackApp
     else
       qs = Rack::Utils.parse_nested_query query
       status = qs["status"] || 400
-      $counter.observe(1, route: '/', status: status, install_id: $install_id)
 
       if !req.head?
         body = "Hello #{$install_id}! The time is #{Time.now}, you requested a #{qs["status"]} status response"
       end
+
+      $counter.observe(1, route: path, status: status, install_id: $install_id)
+
+      duration = Time.now.to_f - start
+      $http_request_duration_seconds.observe(duration, action: 'test', status: status, install_id: $install_id)
     end
     [status, {"Content-Type" => "text/plain"}, [body]]
   end
