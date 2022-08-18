@@ -12,14 +12,15 @@ server.collector.register_metric($counter)
 server.collector.register_metric($http_request_duration_seconds)
 
 $install_id = Time.now.to_i
-helm_message = ENV['HELM_MESSAGE'] || 'missing_helm_message'
+$body_message = "From helm chart: #{(ENV['HELM_MESSAGE'] || 'missing_helm_message')}\n"
 
-puts("GOVUK replatform test app - #{$install_id} - from helm chart - #{helm_message}")
+puts("GOVUK replatform test app - #{$install_id} - #{$body_message}")
 
 Dir['messages/*'].each do |filename|
     file = File.open(filename)
     filedata = file.read
     file.close
+    $body_message += "#{filedata}\n"
     puts("#{$install_id} - #{filedata}")
 end
 
@@ -50,7 +51,7 @@ class RackApp
       duration = Time.now.to_f - start
       $http_request_duration_seconds.observe(duration, action: 'test', status: status, install_id: $install_id)
     end
-    [status, {"Content-Type" => "text/plain"}, [body]]
+    [status, {"Content-Type" => "text/plain"}, [$body_message, body]]
   end
 end
 
