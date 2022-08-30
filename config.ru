@@ -12,9 +12,16 @@ server.collector.register_metric($counter)
 server.collector.register_metric($http_request_duration_seconds)
 
 $install_id = Time.now.to_i
-$body_message = "From helm chart: #{(ENV['HELM_MESSAGE'] || 'missing_helm_message')}\n"
 
-puts("GOVUK replatform test app - #{$install_id} - #{$body_message}")
+$body_message = "Start ENV_MESSAGEs:\n"
+
+(ENV.keys.select { |k| k.start_with?("ENV_MESSAGE") }).each do |k|
+  $body_message += "#{$install_id} - #{ENV[k]}\n"
+end
+
+$body_message += "End ENV_MESSAGEs.\n"
+
+puts("GOVUK replatform test app - #{$install_id}\n#{$body_message}")
 
 Dir['messages/*'].each do |filename|
     file = File.open(filename)
