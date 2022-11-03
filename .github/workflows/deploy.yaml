@@ -1,5 +1,7 @@
 name: Deploy
 
+run-name: Deploy ${{ inputs.gitRef || github.ref_name  }} to ${{ inputs.environment || 'integration' }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -16,30 +18,29 @@ on:
         - integration
         - staging
         default: 'integration'
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - "Jenkinsfile"
-      - ".git**"
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
 
 jobs:
   build-and-publish-image:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     name: Build and publish image
     uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-image.yaml@main
     with:
-      gitRef: ${{ github.event.inputs.gitRef }}
+      gitRef: ${{ inputs.gitRef || github.ref }}
     secrets:
-      AWS_GOVUK_ECR_ACCESS_KEY_ID: ${{ secrets.AWS_GOVUK_ECR_ACCESS_KEY_ID }}
-      AWS_GOVUK_ECR_SECRET_ACCESS_KEY: ${{ secrets.AWS_GOVUK_ECR_SECRET_ACCESS_KEY }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_GOVUK_ECR_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_GOVUK_ECR_SECRET_ACCESS_KEY }}
   trigger-deploy:
     name: Trigger deploy to ${{ github.event.inputs.environment }}
     needs: build-and-publish-image
     uses: alphagov/govuk-infrastructure/.github/workflows/deploy.yaml@main
     with:
       imageTag: ${{ needs.build-and-publish-image.outputs.imageTag }}
-      environment: ${{ github.event.inputs.environment }}
+      environment: ${{ inputs.environment || 'integration' }}
     secrets:
-      WEBHOOK_TOKEN: ${{ secrets.GOVUK_INTEGRATION_ARGO_EVENTS_WEBHOOK_TOKEN }}
-      WEBHOOK_URL: ${{ secrets.GOVUK_INTEGRATION_ARGO_EVENTS_WEBHOOK_URL }}
-      GOVUK_CI_GITHUB_API_TOKEN: ${{ secrets.GOVUK_CI_GITHUB_API_TOKEN }}
+      WEBHOOK_TOKEN: ${{ secrets.GOVUK_ARGO_EVENTS_WEBHOOK_TOKEN }}
+      WEBHOOK_URL: ${{ secrets.GOVUK_ARGO_EVENTS_WEBHOOK_URL }}
+      GH_TOKEN: ${{ secrets.GOVUK_CI_GITHUB_API_TOKEN }}
