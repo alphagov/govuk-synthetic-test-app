@@ -10,4 +10,4 @@ RUN bundle install
 
 EXPOSE 9292 9394
 
-CMD rackup -o 0.0.0.0
+CMD rackup -o 0.0.0.0 -p 3000
