@@ -22,6 +22,11 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - ".git**"
 
 jobs:
   build-and-publish-image:
