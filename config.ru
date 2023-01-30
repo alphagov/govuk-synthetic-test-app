@@ -43,14 +43,14 @@ class RackApp
 
     if path == "/healthcheck/live" || path == "/healthcheck/ready" || path == "/readyz"
       if !req.head?
-          body = "Hello #{$install_id}! The time is #{Time.now}, health check done"
+          body = "Version: #{$install_id}. Hello, the time is #{Time.now}, health check done"
       end
     else
       qs = Rack::Utils.parse_nested_query query
       status = qs["status"] || 400
 
       if !req.head?
-        body = "Hello #{$install_id}! The time is #{Time.now}, you requested a #{qs["status"]} status response"
+        body = "Version: #{$install_id}. Hello, the time is #{Time.now}, you requested a #{qs["status"]} status response"
       end
 
       $counter.observe(1, route: path, status: status, install_id: $install_id)
