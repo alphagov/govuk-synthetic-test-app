@@ -31,7 +31,7 @@ Dir['messages/*'].each do |filename|
     puts("#{$install_id} - #{filedata}")
 end
 
-class RackApp    
+class RackApp
   def call(env)
     start = Time.now.to_f
 
@@ -39,7 +39,7 @@ class RackApp
     path, query = req.fullpath.split('?')
 
     body = ""
-    status = 200
+    status = 500
 
     if path == "/healthcheck/live" || path == "/healthcheck/ready" || path == "/readyz"
       if !req.head?
