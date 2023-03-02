@@ -39,7 +39,7 @@ class RackApp
     path, query = req.fullpath.split('?')
 
     body = ""
-    status = 500
+    status = 200
 
     if path == "/healthcheck/live" || path == "/healthcheck/ready" || path == "/readyz"
       if !req.head?
