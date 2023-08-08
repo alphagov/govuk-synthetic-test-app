@@ -16,4 +16,7 @@ jobs:
     name: Release
     # TODO: switch this to track main branch
     uses: alphagov/govuk-infrastructure/.github/workflows/release.yml@add-version-tag
+    secrets:
+      GH_TOKEN: ${{ secrets.GOVUK_CI_GITHUB_API_TOKEN }}
+
 
