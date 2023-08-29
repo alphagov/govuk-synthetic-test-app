@@ -3,10 +3,10 @@ GEM
   specs:
     daemons (1.4.1)
     eventmachine (1.2.7)
-    prometheus_exporter (2.0.3)
+    prometheus_exporter (2.0.8)
       webrick
-    rack (2.2.4)
-    thin (1.8.1)
+    rack (2.2.8)
+    thin (1.8.2)
       daemons (~> 1.0, >= 1.0.9)
       eventmachine (~> 1.0, >= 1.0.4)
       rack (>= 1, < 3)
@@ -21,9 +21,9 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
-  prometheus_exporter (= 2.0.3)
-  rack (= 2.2.4)
-  thin (= 1.8.1)
+  prometheus_exporter
+  rack
+  thin
 
 BUNDLED WITH
    2.4.19
