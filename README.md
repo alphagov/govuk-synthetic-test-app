@@ -4,7 +4,7 @@ This is a very simple test app to help GOV.UK developers familiarise themselves 
 
 ## How to use this app
 
-Navigate to the test app url on your browser and set the status parameter as the status response you want, e.g. <test app url>?status=200
+Navigate to the test app url on your browser and set the status parameter as the status response you want (e.g. `<test app url>?status=200`)
 
 ## Run the app locally
 
