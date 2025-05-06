@@ -1,1 +1,1 @@
-Test message from govuk replatform test app
+Test message from govuk replatform test app.
