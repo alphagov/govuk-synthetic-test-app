@@ -5,7 +5,7 @@ GEM
     eventmachine (1.2.7)
     prometheus_exporter (2.1.0)
       webrick
-    rack (2.2.13)
+    rack (2.2.14)
     thin (1.8.2)
       daemons (~> 1.0, >= 1.0.9)
       eventmachine (~> 1.0, >= 1.0.4)
