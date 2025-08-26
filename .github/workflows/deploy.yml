@@ -56,7 +56,7 @@ jobs:
     needs: set-date
     uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@main
     with:
-      gitRef: ${{ needs.set-date.outputs.date }}
+      buildArgs: "--tag version:${{ needs.set-date.outputs.date }}"
     permissions:
       id-token: write
       contents: read
