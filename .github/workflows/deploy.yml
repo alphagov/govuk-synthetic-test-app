@@ -20,14 +20,26 @@ on:
         default: 'integration'
   release:
     types: [released]
+  push:
+    tags:
+      - '[0-9]+'
 
 jobs:
+  # build-and-publish-image:
+  #   if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'v')
+  #   name: Build and publish image
+  #   uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@main
+  #   with:
+  #     gitRef: ${{ inputs.gitRef || github.event.release.tag_name }}
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #     packages: write
   build-and-publish-image:
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'v')
     name: Build and publish image
-    uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@main
+    uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@update-build-and-push-multiarch-image-tag
     with:
-      gitRef: ${{ inputs.gitRef || github.event.release.tag_name }}
+      extra_tag: "${{ github.ref_name }}"
     permissions:
       id-token: write
       contents: read
@@ -37,7 +49,7 @@ jobs:
     needs: build-and-publish-image
     uses: alphagov/govuk-infrastructure/.github/workflows/deploy.yml@main
     with:
-      imageTag: ${{ needs.build-and-publish-image.outputs.imageTag }}
+      imageTag: ${{ github.ref_name }}
       environment: ${{ inputs.environment || 'integration' }}
     secrets:
       WEBHOOK_TOKEN: ${{ secrets.GOVUK_ARGO_EVENTS_WEBHOOK_TOKEN }}

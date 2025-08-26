@@ -1,17 +1,6 @@
 require 'rack'
-require 'prometheus_exporter'
-require 'prometheus_exporter/server'
 
-server = PrometheusExporter::Server::WebServer.new bind: "0.0.0.0", port: 9394
-server.start
-
-$counter = PrometheusExporter::Metric::Counter.new("http_requests_total", "total number of web requests")
-$http_request_duration_seconds = PrometheusExporter::Metric::Summary.new("http_request_duration_seconds", "time it took to complete a request", quantiles: [0.01, 0.1, 0.5, 0.9, 0.99])
-
-server.collector.register_metric($counter)
-server.collector.register_metric($http_request_duration_seconds)
-
-$install_id = Time.now.to_i
+$install_id = File.read(".version")
 
 $body_message = "Start ENV_MESSAGEs:\n"
 
@@ -33,8 +22,6 @@ end
 
 class RackApp
   def call(env)
-    start = Time.now.to_f
-
     req = Rack::Request.new(env)
     path, query = req.fullpath.split('?')
 
@@ -45,18 +32,39 @@ class RackApp
       if !req.head?
           body = "Version: #{$install_id}. Hello, the time is #{Time.now}, health check done"
       end
-    else
-      qs = Rack::Utils.parse_nested_query query
-      status = qs["status"] || 400
+    else 
+      if path.start_with?("/version")
+        $body_message = ""
+        if path == "/version/increment"
+          $install_id = (Integer($install_id) + 1).to_s
+          body = $install_id
+          
+          branch="update-version"
 
-      if !req.head?
-        body = "Version: #{$install_id}. Hello, the time is #{Time.now}, you requested a #{qs["status"]} status response"
+          %x(git checkout -b "#{branch}")
+          %x(git pull origin "#{branch}")
+
+          File.write(".version", $install_id)
+
+          %x(git add ".version")
+          %x(git remote set-url origin https://#{ENV["GOVUK_CI_GITHUB_API_TOKEN"]}@github.com/alphagov/govuk-synthetic-test-app.git)
+          %x(git commit -m "Update version to #{$install_id}")
+          %x(git push --set-upstream origin "#{branch}")
+
+          %x(git tag #{$install_id})
+          %x(git push origin #{$install_id})
+        else
+          body = $install_id
+        end
+      else
+        qs = Rack::Utils.parse_nested_query query
+        status = qs["status"] || 400
+
+        puts "path: #{path}"
+        if !req.head?
+          body = "Version: #{$install_id}. Hello, the time is #{Time.now}, you requested a #{qs["status"]} status response"
+        end
       end
-
-      $counter.observe(1, route: path, status: status, install_id: $install_id)
-
-      duration = Time.now.to_f - start
-      $http_request_duration_seconds.observe(duration, action: 'test', status: status, install_id: $install_id)
     end
     [status, {"Content-Type" => "text/plain"}, [$body_message, body]]
   end
