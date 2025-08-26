@@ -43,18 +43,18 @@ jobs:
   #     WEBHOOK_TOKEN: ${{ secrets.GOVUK_ARGO_EVENTS_WEBHOOK_TOKEN }}
   #     WEBHOOK_URL: ${{ secrets.GOVUK_ARGO_EVENTS_WEBHOOK_URL }}
   #     GH_TOKEN: ${{ secrets.GOVUK_CI_GITHUB_API_TOKEN }}
-  build-and-publish-image-synth:
-    name: Build
+  set-date:
     runs-on: ubuntu-latest
-    permissions:
-        id-token: write
-        contents: read
-        packages: write
     steps:
-      - name: Get current date
+      - name: Set date
         id: date
-        run: echo "name=date::$(date +'%Y-%m-%dT%H:%M:%S')" >> "$GITHUB_OUTPUT"
-      - name: Build and publish image
-        uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@main
-        with:
-            gitRef: ${{ steps.date.outputs.date }}
+        run: echo "{date}={$(date +'%Y-%m-%dT%H:%M:%S')}" >> "$GITHUB_STATE" 
+  build-and-publish-image-synth:
+    name: Build and publish image
+    uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@main
+    with:
+      gitRef: ${{ github.env.date }}
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
