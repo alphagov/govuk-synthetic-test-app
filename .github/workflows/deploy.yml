@@ -53,7 +53,7 @@ jobs:
     steps:
       - name: Get current date
         id: date
-        run: echo "::set-output name=date::$(date +'%Y-%m-%dT%H:%M:%S')"
+        run: echo "name=date::$(date +'%Y-%m-%dT%H:%M:%S')" >> "$GITHUB_OUTPUT"
       - name: Build and publish image
         uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@main
         with:
