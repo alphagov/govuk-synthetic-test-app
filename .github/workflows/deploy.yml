@@ -48,12 +48,15 @@ jobs:
     steps:
       - name: Set date
         id: date
-        run: echo "{date}={$(date +'%Y-%m-%dT%H:%M:%S')}" >> "$GITHUB_STATE" 
+        run: echo "date={$(date +'%Y-%m-%dT%H:%M:%S')}" >> "$GITHUB_OUTPUT" 
+    outputs:
+      date: ${{ steps.date.outputs.date }}
   build-and-publish-image-synth:
     name: Build and publish image
+    needs: set-date
     uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@main
     with:
-      gitRef: ${{ github.env.date }}
+      gitRef: ${{ needs.set-date.outputs.date }}
     permissions:
       id-token: write
       contents: read
