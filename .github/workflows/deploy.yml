@@ -68,9 +68,9 @@ jobs:
   build-and-publish-image-synth:
     name: Build and publish image
     needs: update-version
-    uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@main
+    uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@update-build-and-push-multiarch-image-tag
     with:
-      buildArgs: "--tag version:${{ needs.update-version.outputs.date }}"
+      extra_tag: "${{ needs.update-version.outputs.date }}"
     permissions:
       id-token: write
       contents: read
