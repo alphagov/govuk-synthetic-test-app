@@ -10,6 +10,7 @@ git clone https://${GH_TOKEN}@github.com/alphagov/govuk-synthetic-test-app.git t
 cd test-app
 
 git checkout -b add-synthetic-test-cronjob
+git pull origin main
 
 echo ${IMAGE_TAG} > ".version"
 
