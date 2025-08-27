@@ -48,9 +48,21 @@ jobs:
     steps:
       - name: Set date
         id: date
-        run: echo "date={$(date +'%Y-%m-%dT%H:%M:%S')}" >> "$GITHUB_OUTPUT" 
+        run: echo "date=$(date +'%Y-%m-%dT%H:%M:%S')" >> "$GITHUB_OUTPUT" 
     outputs:
       date: ${{ steps.date.outputs.date }}
+  update-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ckanext-datagovuk repository
+        uses: actions/checkout@v4
+        with:
+          repository: alphagov/govuk-synthetic-test-app
+          path: /
+      - run: bash ./ckanext/docker/create-pr.sh
+        env:
+          GH_TOKEN: ${{ secrets.PR_GITHUB_TOKEN }}
+          IMAGE_TAG: ${{ needs.set-date.outputs.date }}
   build-and-publish-image-synth:
     name: Build and publish image
     needs: set-date

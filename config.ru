@@ -11,7 +11,9 @@ $http_request_duration_seconds = PrometheusExporter::Metric::Summary.new("http_r
 server.collector.register_metric($counter)
 server.collector.register_metric($http_request_duration_seconds)
 
-$install_id = Time.now.to_i
+version_file = File.open(".version")
+$install_id = version_file.readline
+version_file.close
 
 $body_message = "Start ENV_MESSAGEs:\n"
 
@@ -53,10 +55,10 @@ class RackApp
         body = "Version: #{$install_id}. Hello, the time is #{Time.now}, you requested a #{qs["status"]} status response"
       end
 
-      $counter.observe(1, route: path, status: status, install_id: $install_id)
+      # $counter.observe(1, route: path, status: status, install_id: $install_id)
 
-      duration = Time.now.to_f - start
-      $http_request_duration_seconds.observe(duration, action: 'test', status: status, install_id: $install_id)
+      # duration = Time.now.to_f - start
+      # $http_request_duration_seconds.observe(duration, action: 'test', status: status, install_id: $install_id)
     end
     [status, {"Content-Type" => "text/plain"}, [$body_message, body]]
   end
