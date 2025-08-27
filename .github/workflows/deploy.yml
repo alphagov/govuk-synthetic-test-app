@@ -48,13 +48,18 @@ jobs:
     steps:
       - name: Set date
         id: date
-        run: echo "date=$(date +'%Y-%m-%dT%H:%M:%S')" >> "$GITHUB_OUTPUT" 
+        run: |
+          datetime_now=$(date +'%Y-%m-%dT%H:%M:%S')
+          echo "date=${datetime_now}" >> "$GITHUB_ENV" 
+          echo "date=${datetime_now}" >> "$GITHUB_OUTPUT" 
       - name: Checkout ckanext-datagovuk repository
         uses: actions/checkout@v4
         with:
           repository: alphagov/govuk-synthetic-test-app
           path: .
-      - run: bash ./update-version.sh
+      - run: |
+          echo "${{ env.date }}"
+          bash ./update-version.sh
         env:
           GH_TOKEN: ${{ secrets.PR_GITHUB_TOKEN }}
           IMAGE_TAG: ${{ env.date }}
