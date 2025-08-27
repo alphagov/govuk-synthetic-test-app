@@ -43,32 +43,29 @@ jobs:
   #     WEBHOOK_TOKEN: ${{ secrets.GOVUK_ARGO_EVENTS_WEBHOOK_TOKEN }}
   #     WEBHOOK_URL: ${{ secrets.GOVUK_ARGO_EVENTS_WEBHOOK_URL }}
   #     GH_TOKEN: ${{ secrets.GOVUK_CI_GITHUB_API_TOKEN }}
-  set-date:
+  update-version:
     runs-on: ubuntu-latest
     steps:
       - name: Set date
         id: date
         run: echo "date=$(date +'%Y-%m-%dT%H:%M:%S')" >> "$GITHUB_OUTPUT" 
-    outputs:
-      date: ${{ steps.date.outputs.date }}
-  update-version:
-    runs-on: ubuntu-latest
-    steps:
       - name: Checkout ckanext-datagovuk repository
         uses: actions/checkout@v4
         with:
           repository: alphagov/govuk-synthetic-test-app
-          path: /
-      - run: bash ./ckanext/docker/create-pr.sh
+          path: .
+      - run: bash ./update-version.sh
         env:
           GH_TOKEN: ${{ secrets.PR_GITHUB_TOKEN }}
-          IMAGE_TAG: ${{ needs.set-date.outputs.date }}
+          IMAGE_TAG: ${{ env.date }}
+    outputs:
+      date: ${{ steps.date.outputs.date }}
   build-and-publish-image-synth:
     name: Build and publish image
-    needs: set-date
+    needs: update-version
     uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@main
     with:
-      buildArgs: "--tag version:${{ needs.set-date.outputs.date }}"
+      buildArgs: "--tag version:${{ needs.update-version.outputs.date }}"
     permissions:
       id-token: write
       contents: read
