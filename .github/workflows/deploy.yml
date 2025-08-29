@@ -46,31 +46,22 @@ jobs:
   update-version:
     runs-on: ubuntu-latest
     steps:
-      - name: Set date
-        id: date
-        run: |
-          datetime_now=$(date +'%Y-%m-%dT%H:%M:%S')
-          echo "date=${datetime_now}" >> "$GITHUB_ENV" 
-          echo "date=${datetime_now}" >> "$GITHUB_OUTPUT" 
       - name: Checkout ckanext-datagovuk repository
         uses: actions/checkout@v4
         with:
           repository: alphagov/govuk-synthetic-test-app
           path: .
       - run: |
-          echo "${{ env.date }}"
           bash ./update-version.sh
         env:
           GH_TOKEN: ${{ secrets.PR_GITHUB_TOKEN }}
-          IMAGE_TAG: ${{ env.date }}
-    outputs:
-      date: ${{ steps.date.outputs.date }}
+          IMAGE_TAG: ${{ github.ref_name }}
   build-and-publish-image-synth:
     name: Build and publish image
     needs: update-version
     uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@update-build-and-push-multiarch-image-tag
     with:
-      extra_tag: "${{ needs.update-version.outputs.date }}"
+      extra_tag: "${{ github.ref_name }}"
     permissions:
       id-token: write
       contents: read
