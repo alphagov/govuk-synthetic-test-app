@@ -20,6 +20,9 @@ on:
         default: 'integration'
   release:
     types: [released]
+  push:
+    tags:
+      - '[0-9]+'
 
 jobs:
   # build-and-publish-image:
