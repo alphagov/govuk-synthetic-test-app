@@ -49,7 +49,7 @@ class RackApp
           File.write(".version", $install_id)
           %x(git add ".version")
           %x(git commit -m "Update version to to #{$install_id}")
-          %x(git push --set-upstream origin "#{$install_id}")
+          %x(git push --set-upstream origin "#{branch}")
           # octokit = Octokit::Client.new(access_token: '')
 
         else
