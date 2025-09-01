@@ -1,3 +1,4 @@
+require 'octokit'
 require 'rack'
 
 $install_id = File.read(".version")
@@ -33,9 +34,27 @@ class RackApp
           body = "Version: #{$install_id}. Hello, the time is #{Time.now}, health check done"
       end
     else 
-      if path == "/version"
+      if path.start_with?("/version")
         $body_message = ""
-        body = $install_id
+        if path == "/version/increment"
+          $install_id = (Integer($install_id) + 1).to_s
+          body = $install_id
+          
+          branch="update-version"
+
+          %x(git checkout -b "#{branch}")
+          %x(git pull origin "#{branch}")
+          %x(git checkout -b "update-version")
+
+          File.write(".version", $install_id)
+          %x(git add ".version")
+          %x(git commit -m "Update version to to #{$install_id}")
+          %x(git push --set-upstream origin "#{$install_id}")
+          # octokit = Octokit::Client.new(access_token: '')
+
+        else
+          body = $install_id
+        end
       else
         qs = Rack::Utils.parse_nested_query query
         status = qs["status"] || 400
