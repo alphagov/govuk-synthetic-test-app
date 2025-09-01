@@ -49,7 +49,7 @@ class RackApp
           File.write(".version", $install_id)
 
           %x(git add ".version")
-          %x(git commit -m "Update version to to #{$install_id}")
+          %x(git commit -m "Update version to #{$install_id}")
           %x(git push --set-upstream origin "#{branch}")
 
           %x(git tag #{$install_id})
