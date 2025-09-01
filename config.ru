@@ -44,7 +44,7 @@ class RackApp
 
           %x(git checkout -b "#{branch}")
           %x(git pull origin "#{branch}")
-          %x(git checkout -b "update-version")
+          %x(git checkout -b "#{branch}")
 
           File.write(".version", $install_id)
           %x(git add ".version")
