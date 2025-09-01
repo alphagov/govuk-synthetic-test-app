@@ -43,22 +43,22 @@ jobs:
   #     WEBHOOK_TOKEN: ${{ secrets.GOVUK_ARGO_EVENTS_WEBHOOK_TOKEN }}
   #     WEBHOOK_URL: ${{ secrets.GOVUK_ARGO_EVENTS_WEBHOOK_URL }}
   #     GH_TOKEN: ${{ secrets.GOVUK_CI_GITHUB_API_TOKEN }}
-  update-version:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout ckanext-datagovuk repository
-        uses: actions/checkout@v4
-        with:
-          repository: alphagov/govuk-synthetic-test-app
-          path: .
-      - run: |
-          bash ./update-version.sh
-        env:
-          GH_TOKEN: ${{ secrets.PR_GITHUB_TOKEN }}
-          IMAGE_TAG: ${{ github.ref_name }}
+  # update-version:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout ckanext-datagovuk repository
+  #       uses: actions/checkout@v4
+  #       with:
+  #         repository: alphagov/govuk-synthetic-test-app
+  #         path: .
+  #     - run: |
+  #         bash ./update-version.sh
+  #       env:
+  #         GH_TOKEN: ${{ secrets.PR_GITHUB_TOKEN }}
+  #         IMAGE_TAG: ${{ github.ref_name }}
   build-and-publish-image-synth:
     name: Build and publish image
-    needs: update-version
+    # needs: update-version
     uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@update-build-and-push-multiarch-image-tag
     with:
       extra_tag: "${{ github.ref_name }}"
