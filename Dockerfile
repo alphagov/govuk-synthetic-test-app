@@ -13,6 +13,15 @@ WORKDIR $APP_HOME
 COPY --from=builder $BUNDLE_PATH $BUNDLE_PATH
 COPY --from=builder $APP_HOME .
 
+RUN apt-get update && \
+    apt-get install -y git ssh
+
+RUN mkdir -p ~/.ssh && \
+    ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+# Give app user ownership to allow git to make changes
+RUN chown -R app:app /app
+
 USER app
 ENV ENV_MESSAGE_EXAMPLE="Environment message from example user"
 EXPOSE 3000 9394
