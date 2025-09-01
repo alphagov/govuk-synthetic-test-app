@@ -1,4 +1,3 @@
-require 'octokit'
 require 'rack'
 
 $install_id = File.read(".version")
@@ -44,11 +43,11 @@ class RackApp
 
           %x(git checkout -b "#{branch}")
           %x(git pull origin "#{branch}")
-          %x(git checkout -b "#{branch}")
 
           File.write(".version", $install_id)
 
           %x(git add ".version")
+          %x(git remote set-url origin https://#{ENV["GOVUK_CI_GITHUB_API_TOKEN"]}@github.com/alphagov/govuk-synthetic-test-app.git)
           %x(git commit -m "Update version to #{$install_id}")
           %x(git push --set-upstream origin "#{branch}")
 
