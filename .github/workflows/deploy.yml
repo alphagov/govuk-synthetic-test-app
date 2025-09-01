@@ -49,7 +49,7 @@ jobs:
     needs: build-and-publish-image
     uses: alphagov/govuk-infrastructure/.github/workflows/deploy.yml@main
     with:
-      imageTag: ${{ needs.build-and-publish-image.outputs.imageTag }}
+      imageTag: ${{ github.ref_name }}
       environment: ${{ inputs.environment || 'integration' }}
     secrets:
       WEBHOOK_TOKEN: ${{ secrets.GOVUK_ARGO_EVENTS_WEBHOOK_TOKEN }}
