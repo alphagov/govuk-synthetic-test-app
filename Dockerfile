@@ -14,6 +14,5 @@ COPY --from=builder $BUNDLE_PATH $BUNDLE_PATH
 COPY --from=builder $APP_HOME .
 
 USER app
-ENV ENV_MESSAGE_EXAMPLE="Environment message from example user"
-EXPOSE 3000 9394
+EXPOSE 3000
 CMD rackup -o 0.0.0.0 -p 3000
