@@ -36,23 +36,23 @@ class RackApp
       if path.start_with?("/version")
         $body_message = ""
         if path == "/version/increment"
-          $install_id = (Integer($install_id) + 1).to_s
-          body = $install_id
+          next_version = (Integer($install_id) + 1).to_s
+          body = next_version
           
           branch="update-version"
 
           %x(git checkout -b "#{branch}")
           %x(git pull origin "#{branch}")
 
-          File.write(".version", $install_id)
+          File.write(".version", next_version)
 
           %x(git add ".version")
           %x(git remote set-url origin https://#{ENV["GOVUK_CI_GITHUB_API_TOKEN"]}@github.com/alphagov/govuk-synthetic-test-app.git)
-          %x(git commit -m "Update version to #{$install_id}")
+          %x(git commit -m "Update version to #{next_version}")
           %x(git push --set-upstream origin "#{branch}")
 
-          %x(git tag #{$install_id})
-          %x(git push origin #{$install_id})
+          # set it back to original version so that it is clear which app version has been deployed
+          File.write(".version", $install_id)
         else
           body = $install_id
         end
