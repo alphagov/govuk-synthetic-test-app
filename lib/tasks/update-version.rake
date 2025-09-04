@@ -1,6 +1,9 @@
 desc "Update version file"
 
 task :update_version do
+  %x(git checkout -b "update-version-main")
+  %x(git pull origin "update-version-main")
+
   current_version = File.read(".version").strip
   next_version = (Integer(current_version) + 1).to_s
 
