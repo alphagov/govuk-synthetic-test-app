@@ -12,6 +12,8 @@ RUN go mod download
 
 COPY . .
 
+RUN go install assume_role
+
 # CMD [ "/assume_role" ]
 
 CMD ["sleep", "6000"]
