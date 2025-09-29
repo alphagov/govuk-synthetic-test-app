@@ -1,9 +1,15 @@
 FROM golang:1.25.1-alpine3.22
 
 RUN apk add --no-cache aws-cli
-RUN mkdir -p /app/.aws
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN mkdir /app
+RUN chown appuser:appgroup /app
+COPY --chown=appuser:appgroup . /app
 
 WORKDIR /app
+
+USER appuser
 
 COPY go.mod .
 COPY go.sum .
@@ -11,8 +17,6 @@ COPY go.sum .
 RUN go mod download
 
 COPY . .
-
-RUN go install assume_role
 
 # CMD [ "/assume_role" ]
 
