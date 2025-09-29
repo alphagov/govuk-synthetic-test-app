@@ -5,24 +5,9 @@ RUN apk add --no-cache aws-cli
 ARG USER=app
 ENV HOME=/home/$USER
 
-# install sudo as root
-RUN apk add --update sudo
-
-# add new user
-# RUN adduser -D $USER \
-#         && echo "$USER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$USER \
-#         && chmod 0440 /etc/sudoers.d/$USER
-
-# RUN adduser -D $USER \
-#         && mkdir -p /etc/sudoers.d \
-#         && echo "$USER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$USER \
-#         && chmod 0440 /etc/sudoers.d/$USER
-
 RUN addgroup -g 1000 $USER \
-    && adduser -u 1000 -G $USER -D $USER
-
-# USER appuser
-# WORKDIR /app
+    && adduser -u 1000 -G $USER -D $USER \
+    && chown -R $USER:$USER $HOME 
 
 USER $USER
 WORKDIR $HOME
