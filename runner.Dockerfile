@@ -1,6 +1,6 @@
 FROM golang:1.25.1-alpine3.22
 
-RUN apk add --no-cache aws-cli
+RUN apk add --no-cache aws-cli curl
 
 ARG USER=app
 ENV HOME=/home/$USER

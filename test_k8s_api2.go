@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -13,12 +14,14 @@ import (
 )
 
 func main() {
+	ctx := context.TODO()
 	g, _ := token.NewGenerator(false, false)
-	tk, err := g.GetWithOptions(&token.GetTokenOptions{
-		Region:        "<region>",
-		ClusterID:     "<cluster_name>",
-		AssumeRoleARN: "arn:aws:iam::210287912431:role/synthetic-test-assumed",
-		Session:       nil,
+	tk, err := g.GetWithOptions(ctx, &token.GetTokenOptions{
+		Region:               "eu-west-1",
+		ClusterID:            "apps",
+		AssumeRoleARN:        "arn:aws:iam::210287912431:role/synthetic-test-assumed",
+		AssumeRoleExternalID: "111",
+		SessionName:          "TestK8sAPI",
 	})
 
 	if err != nil {
