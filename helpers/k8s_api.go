@@ -10,7 +10,13 @@ import (
 	"os"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
+
+var API_SERVER string = "https://kubernetes.default.svc/api/v1/namespaces"
 
 func GetK8sClient() (*http.Client, string, error) {
 	ctx := context.TODO()
@@ -46,8 +52,8 @@ func GetK8sClient() (*http.Client, string, error) {
 	return client, tk.Token, nil
 }
 
-func GetK8sAPIData(client *http.Client, k8s_api_url string, token string) ([]byte, error) {
-	req, err := http.NewRequest("GET", k8s_api_url, nil)
+func GetK8sAPIData(client *http.Client, token string, namespace string, resource_type string) ([]byte, error) {
+	req, err := http.NewRequest("GET", API_SERVER+"/"+namespace+"/"+resource_type, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,4 +71,26 @@ func GetK8sAPIData(client *http.Client, k8s_api_url string, token string) ([]byt
 	}
 
 	return bodyText, nil
+}
+
+func GetPodList(namespace string, kind string) (*corev1.PodList, error) {
+	client, token, _ := GetK8sClient()
+
+	bodyText_all, _ := GetK8sAPIData(client, token, namespace, kind)
+
+	// https://godoc.org/k8s.io/apimachinery/pkg/runtime#Scheme
+	scheme := runtime.NewScheme()
+
+	// https://godoc.org/k8s.io/apimachinery/pkg/runtime/serializer#CodecFactory
+	codecFactory := serializer.NewCodecFactory(scheme)
+
+	// https://godoc.org/k8s.io/apimachinery/pkg/runtime#Decoder
+	deserializer := codecFactory.UniversalDeserializer()
+
+	podObject, _, err := deserializer.Decode(bodyText_all, nil, &corev1.PodList{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	podList := podObject.(*corev1.PodList)
+	return podList, nil
 }
