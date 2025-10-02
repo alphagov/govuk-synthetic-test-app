@@ -19,6 +19,6 @@ RUN go mod download
 
 COPY . .
 
-# CMD [ "/assume_role" ]
+CMD ["sleep", "60000"]
 
-CMD ["sleep", "6000"]
+# CMD ["go", "run", "test_k8s_api.go"]
