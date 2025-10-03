@@ -79,8 +79,8 @@ func GetK8sAPIData(client *http.Client, token string, namespace string, resource
 	return bodyText, err
 }
 
-func GetPodList(namespace string, kind string) (*corev1.PodList, error) {
-	client, token, _ := GetK8sClient()
+func GetPodList(client *http.Client, token string, namespace string, kind string) (*corev1.PodList, error) {
+	// client, token, _ := GetK8sClient()
 
 	bodyText_all, err := GetK8sAPIData(client, token, namespace, kind)
 	if err != nil {
