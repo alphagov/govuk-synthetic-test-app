@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -53,7 +54,8 @@ func GetK8sClient() (*http.Client, string, error) {
 }
 
 func GetK8sAPIData(client *http.Client, token string, namespace string, resource_type string) ([]byte, error) {
-	req, err := http.NewRequest("GET", API_SERVER+"/"+namespace+"/"+resource_type, nil)
+	url := API_SERVER + "/" + namespace + "/" + resource_type
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -70,13 +72,20 @@ func GetK8sAPIData(client *http.Client, token string, namespace string, resource
 		log.Fatal(err)
 	}
 
-	return bodyText, nil
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("Error got %v status, retrieving %v", resp.StatusCode, url)
+	}
+
+	return bodyText, err
 }
 
 func GetPodList(namespace string, kind string) (*corev1.PodList, error) {
 	client, token, _ := GetK8sClient()
 
-	bodyText_all, _ := GetK8sAPIData(client, token, namespace, kind)
+	bodyText_all, err := GetK8sAPIData(client, token, namespace, kind)
+	if err != nil {
+		return nil, err
+	}
 
 	// https://godoc.org/k8s.io/apimachinery/pkg/runtime#Scheme
 	scheme := runtime.NewScheme()
