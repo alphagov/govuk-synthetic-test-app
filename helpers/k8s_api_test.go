@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 )
 
 var _ = Describe("AssumeRole", Ordered, func() {
@@ -15,7 +16,9 @@ var _ = Describe("AssumeRole", Ordered, func() {
 		var token string
 
 		BeforeAll(func() {
+			format.MaxLength = 0
 			client, token, _ := k8s_api.GetK8sClient()
+
 			Expect(client).NotTo(BeNil())
 			Expect(token).NotTo(BeNil())
 		})
