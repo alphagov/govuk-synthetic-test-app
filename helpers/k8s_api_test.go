@@ -10,16 +10,16 @@ import (
 )
 
 var _ = Describe("AssumeRole", Ordered, func() {
-	var client *http.Client
-	var token string
-
-	BeforeAll(func() {
-		client, token, _ := k8s_api.GetK8sClient()
-		Expect(client).NotTo(BeNil())
-		Expect(token).NotTo(BeNil())
-	})
-
 	Context("when called with apps namespace and pods kind", func() {
+		var client *http.Client
+		var token string
+
+		BeforeAll(func() {
+			client, token, _ := k8s_api.GetK8sClient()
+			Expect(client).NotTo(BeNil())
+			Expect(token).NotTo(BeNil())
+		})
+
 		It("returns pods list with first item arch as arm64", func() {
 			podList, _ := k8s_api.GetPodList(client, token, "apps", "pods")
 			fmt.Printf("Pods: %+v, %+v\n", podList.Items[0].Labels["app"], podList.Items[0].Spec.Containers[0].Image)
@@ -36,4 +36,6 @@ var _ = Describe("AssumeRole", Ordered, func() {
 			Expect(allARM64).To(Equal(true))
 		})
 	})
+	// TODO when called with all other namespaces and pods kind get a 403
+	// TODO when trying to perform a DELETE, PUT or CREATE, get a 403
 })
