@@ -3,28 +3,15 @@ package helpers_test
 import (
 	"fmt"
 	k8s_api "govuk-synthetic-test-app/helpers"
-	"net/http"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/format"
 )
 
 var _ = Describe("AssumeRole", Ordered, func() {
 	Context("when called with apps namespace and pods kind", func() {
-		var client *http.Client
-		var token string
-
-		BeforeAll(func() {
-			format.MaxLength = 0
-			client, token, _ := k8s_api.GetK8sClient()
-
-			Expect(client).NotTo(BeNil())
-			Expect(token).NotTo(BeNil())
-		})
-
 		It("returns pods list with first item arch as arm64", func() {
-			podList, _ := k8s_api.GetPodList(client, token, "apps", "pods")
+			podList, _ := k8s_api.GetPodList("apps", "pods")
 			fmt.Printf("Pods: %+v, %+v\n", podList.Items[0].Labels["app"], podList.Items[0].Spec.Containers[0].Image)
 			Expect(podList.Items[0].Labels["app.kubernetes.io/arch"]).To(Equal("arm64"))
 			var allARM64 = true
