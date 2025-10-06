@@ -7,7 +7,8 @@ ENV HOME=/home/$USER
 
 RUN addgroup -g 1000 $USER \
     && adduser -u 1000 -G $USER -D $USER \
-    && chown -R $USER:$USER $HOME 
+    && chown -R $USER:$USER $HOME \
+    && chown $USER:$USER /tmp
 
 USER $USER
 WORKDIR $HOME
