@@ -15,6 +15,4 @@ WORKDIR $HOME
 RUN go mod vendor
 RUN go install github.com/onsi/ginkgo/v2/ginkgo
 
-# CMD ["sleep", "60000"]
-
 CMD ["ginkgo", "-v", "helpers"]
