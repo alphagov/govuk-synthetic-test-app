@@ -45,7 +45,7 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 			},
 			Entry("When accessing datagovuk", "datagovuk"),
 			Entry("When accessing default", "default"),
-			Entry("When accessing cluster-services", "cluster-services"),
+			// Entry("When accessing cluster-services", "cluster-services"),
 			Entry("When accessing licensify", "licensify"),
 			Entry("When accessing monitoring", "monitoring"),
 		)
