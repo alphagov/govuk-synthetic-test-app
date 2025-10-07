@@ -36,7 +36,7 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 	})
 
 	Context("when calling k8s api with NON 'apps' namespace and `pods` kind", func() {
-		DescribeTable("Check assumed role cannot access the namespace",
+		DescribeTable("assumed role cannot access the namespace",
 			func(namespace string) {
 				podList, err := k8s_api.GetPodList(namespace, "pods")
 				Expect(podList).To(BeNil())
@@ -45,7 +45,7 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 			},
 			Entry("When accessing datagovuk", "datagovuk"),
 			Entry("When accessing default", "default"),
-			// Entry("When accessing cluster-services", "cluster-services"),
+			Entry("When accessing cluster-services", "cluster-services"),
 			Entry("When accessing licensify", "licensify"),
 			Entry("When accessing monitoring", "monitoring"),
 		)
