@@ -65,12 +65,12 @@ func GetK8sAPIData(namespace string, resource_type string) ([]byte, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		err = fmt.Errorf("Error got %v status, retrieving %v", resp.StatusCode, url)
 	}
 	defer resp.Body.Close()
 	bodyText, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		err = fmt.Errorf("Error got %v status, retrieving %v", resp.StatusCode, url)
 	}
 
 	if resp.StatusCode != 200 {
@@ -81,8 +81,6 @@ func GetK8sAPIData(namespace string, resource_type string) ([]byte, error) {
 }
 
 func GetPodList(namespace string, kind string) (*corev1.PodList, error) {
-	// client, token, _ := GetK8sClient()
-
 	bodyText_all, err := GetK8sAPIData(namespace, kind)
 	if err != nil {
 		return nil, err
