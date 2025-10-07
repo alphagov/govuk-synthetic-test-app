@@ -14,9 +14,9 @@ RUN addgroup -g 1000 $USER \
 USER $USER
 WORKDIR $HOME
 
-RUN go mod download
+RUN go mod vendor
 RUN go install github.com/onsi/ginkgo/v2/ginkgo
 
 # CMD ["sleep", "60000"]
 
-CMD ["ginkgo", "helpers"]
+CMD ["ginkgo", "-v", "helpers"]
