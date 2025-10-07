@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 
@@ -18,23 +17,26 @@ import (
 )
 
 var API_SERVER string = "https://kubernetes.default.svc/api/v1/namespaces"
+var INTEGRATION_AWS_ACCOUNT_ID string = "210287912431"
+var STAGING_AWS_ACCOUNT_ID string = "696911096973"
+var PRODUCTION_AWS_ACCOUNT_ID string = "172025368201"
 
-func GetK8sClient() (*http.Client, string, error) {
+func GetK8sClient(environment_account_id string) (*http.Client, string, error) {
 	ctx := context.TODO()
 	g, _ := token.NewGenerator(false, false)
 	tk, err := g.GetWithOptions(ctx, &token.GetTokenOptions{
 		Region:        "eu-west-1",
 		ClusterID:     "govuk",
-		AssumeRoleARN: "arn:aws:iam::210287912431:role/synthetic-test-assumed",
+		AssumeRoleARN: fmt.Sprintf("arn:aws:iam::%+v:role/synthetic-test-assumed", environment_account_id),
 		SessionName:   "GovUKSyntheticTestApp",
 	})
 	if err != nil {
-		log.Fatal(err)
+		return nil, "", err
 	}
 
 	caCert, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 	if err != nil {
-		log.Fatal(err)
+		return nil, tk.Token, err
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
@@ -47,18 +49,22 @@ func GetK8sClient() (*http.Client, string, error) {
 		},
 	}
 	if err != nil {
-		log.Fatal(err)
+		return nil, tk.Token, err
 	}
 
-	return client, tk.Token, nil
+	return client, tk.Token, err
 }
 
-func GetK8sAPIData(namespace string, resource_type string) ([]byte, error) {
-	client, token, _ := GetK8sClient()
+func GetK8sAPIData(environment_account_id string, namespace string, resource_type string) ([]byte, error) {
+	client, token, err := GetK8sClient(environment_account_id)
+	if err != nil {
+		return nil, err
+	}
+
 	url := API_SERVER + "/" + namespace + "/" + resource_type
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/yaml")
@@ -80,8 +86,8 @@ func GetK8sAPIData(namespace string, resource_type string) ([]byte, error) {
 	return bodyText, err
 }
 
-func GetPodList(namespace string, kind string) (*corev1.PodList, error) {
-	bodyText_all, err := GetK8sAPIData(namespace, kind)
+func GetPodList(environment_account_id string, namespace string, kind string) (*corev1.PodList, error) {
+	bodyText_all, err := GetK8sAPIData(environment_account_id, namespace, kind)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +103,7 @@ func GetPodList(namespace string, kind string) (*corev1.PodList, error) {
 
 	podObject, _, err := deserializer.Decode(bodyText_all, nil, &corev1.PodList{})
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	podList := podObject.(*corev1.PodList)
 	return podList, nil
