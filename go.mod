@@ -1,4 +1,4 @@
-module govuk-synthetic-test-app
+module github.com/alphagov/govuk-synthetic-test-app
 
 go 1.25.0
 
