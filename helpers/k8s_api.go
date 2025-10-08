@@ -16,13 +16,34 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-var API_SERVER string = "https://kubernetes.default.svc/api/v1/namespaces"
-var INTEGRATION_AWS_ACCOUNT_ID string = "210287912431"
-var STAGING_AWS_ACCOUNT_ID string = "696911096973"
-var PRODUCTION_AWS_ACCOUNT_ID string = "172025368201"
+const API_SERVER string = "https://kubernetes.default.svc/api/v1/namespaces"
+const CERT_PATH string = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+const INTEGRATION_AWS_ACCOUNT_ID string = "210287912431"
+const STAGING_AWS_ACCOUNT_ID string = "696911096973"
+const PRODUCTION_AWS_ACCOUNT_ID string = "172025368201"
+
+func checkRunningInK8s() (bool, error) {
+	if _, err := os.Stat(CERT_PATH); err != nil {
+		if os.IsNotExist(err) {
+			fmt.Printf("Can only run this code when inside a k8s pod\n")
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+	return true, nil
+}
 
 func GetK8sClient(environment_account_id string) (*http.Client, string, error) {
 	ctx := context.TODO()
+
+	running_in_k8s, err := checkRunningInK8s()
+	if err != nil {
+		return nil, "", err
+	} else if !running_in_k8s {
+		return nil, "", nil
+	}
+
 	g, _ := token.NewGenerator(false, false)
 	tk, err := g.GetWithOptions(ctx, &token.GetTokenOptions{
 		Region:        "eu-west-1",
@@ -30,11 +51,12 @@ func GetK8sClient(environment_account_id string) (*http.Client, string, error) {
 		AssumeRoleARN: fmt.Sprintf("arn:aws:iam::%+v:role/synthetic-test-assumed", environment_account_id),
 		SessionName:   "GovUKSyntheticTestApp",
 	})
+	fmt.Printf("token: %+v\n", tk)
 	if err != nil {
 		return nil, "", err
 	}
 
-	caCert, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	caCert, err := os.ReadFile(CERT_PATH)
 	if err != nil {
 		return nil, tk.Token, err
 	}
