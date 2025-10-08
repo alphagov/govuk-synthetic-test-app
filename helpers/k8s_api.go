@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
@@ -44,21 +45,23 @@ func GetK8sClient(environment_account_id string) (*http.Client, string, error) {
 		return nil, "", nil
 	}
 
-	g, _ := token.NewGenerator(false, false)
+	g, err := token.NewGenerator(false, false)
+	if err != nil {
+		return nil, "", err
+	}
 	tk, err := g.GetWithOptions(ctx, &token.GetTokenOptions{
 		Region:        "eu-west-1",
 		ClusterID:     "govuk",
-		AssumeRoleARN: fmt.Sprintf("arn:aws:iam::%+v:role/synthetic-test-assumed", environment_account_id),
+		AssumeRoleARN: fmt.Sprintf("arn:aws:iam::%s:role/synthetic-test-assumed", environment_account_id),
 		SessionName:   "GovUKSyntheticTestApp",
 	})
-	fmt.Printf("token: %+v\n", tk)
 	if err != nil {
 		return nil, "", err
 	}
 
 	caCert, err := os.ReadFile(CERT_PATH)
 	if err != nil {
-		return nil, tk.Token, err
+		return nil, "", err
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
@@ -70,11 +73,8 @@ func GetK8sClient(environment_account_id string) (*http.Client, string, error) {
 			},
 		},
 	}
-	if err != nil {
-		return nil, tk.Token, err
-	}
 
-	return client, tk.Token, err
+	return client, tk.Token, nil
 }
 
 func GetK8sAPIData(environment_account_id string, namespace string, resource_type string) ([]byte, error) {
@@ -83,7 +83,10 @@ func GetK8sAPIData(environment_account_id string, namespace string, resource_typ
 		return nil, err
 	}
 
-	url := API_SERVER + "/" + namespace + "/" + resource_type
+	url, err := url.JoinPath(API_SERVER, namespace, resource_type)
+	if err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -93,16 +96,19 @@ func GetK8sAPIData(environment_account_id string, namespace string, resource_typ
 
 	resp, err := client.Do(req)
 	if err != nil {
-		err = fmt.Errorf("Error got %v status, retrieving %v", resp.StatusCode, url)
+		err = fmt.Errorf("Error: %v, retrieving %v", err, url)
+		return nil, err
 	}
 	defer resp.Body.Close()
 	bodyText, err := io.ReadAll(resp.Body)
 	if err != nil {
-		err = fmt.Errorf("Error got %v status, retrieving %v", resp.StatusCode, url)
+		err = fmt.Errorf("Error: %v, retrieving %v", err, url)
+		return nil, err
 	}
 
 	if resp.StatusCode != 200 {
 		err = fmt.Errorf("Error got %v status, retrieving %v", resp.StatusCode, url)
+		return nil, err
 	}
 
 	return bodyText, err
