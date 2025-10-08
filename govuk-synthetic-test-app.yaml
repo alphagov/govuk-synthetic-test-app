@@ -10,8 +10,11 @@ spec:
     restartPolicy: Never
     containers:
       - name: govuk-synthetic-test-app-runner
-        image: 'ghcr.io/alphagov/govuk/govuk-synthetic-test-app-runner:e5244ca8f722c446fa2910c07ec2abb74d07013d'
+        image: 'ghcr.io/alphagov/govuk/govuk-synthetic-test-app-runner:a735838b5054c71ce48abf02b08d43a33abdf5d6'
         imagePullPolicy: Always
+        env:
+          - name: ENVIRONMENT_ACCOUNT_ID
+            value: "210287912431"
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
