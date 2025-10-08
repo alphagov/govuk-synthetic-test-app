@@ -35,9 +35,7 @@ func checkRunningInK8s() (bool, error) {
 	return true, nil
 }
 
-func GetK8sClient(environment_account_id string) (*http.Client, string, error) {
-	ctx := context.TODO()
-
+func GetK8sClient(ctx context.Context, environment_account_id string) (*http.Client, string, error) {
 	running_in_k8s, err := checkRunningInK8s()
 	if err != nil {
 		return nil, "", err
@@ -77,8 +75,8 @@ func GetK8sClient(environment_account_id string) (*http.Client, string, error) {
 	return client, tk.Token, nil
 }
 
-func GetK8sAPIData(environment_account_id string, namespace string, resource_type string) ([]byte, error) {
-	client, token, err := GetK8sClient(environment_account_id)
+func GetK8sAPIData(ctx context.Context, environment_account_id string, namespace string, resource_type string) ([]byte, error) {
+	client, token, err := GetK8sClient(ctx, environment_account_id)
 	if err != nil {
 		return nil, err
 	}
@@ -114,8 +112,8 @@ func GetK8sAPIData(environment_account_id string, namespace string, resource_typ
 	return bodyText, err
 }
 
-func GetPodList(environment_account_id string, namespace string) (*corev1.PodList, error) {
-	bodyText_all, err := GetK8sAPIData(environment_account_id, namespace, "pods")
+func GetPodList(ctx context.Context, environment_account_id string, namespace string) (*corev1.PodList, error) {
+	bodyText_all, err := GetK8sAPIData(ctx, environment_account_id, namespace, "pods")
 	if err != nil {
 		return nil, err
 	}
