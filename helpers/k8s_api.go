@@ -86,8 +86,8 @@ func GetK8sAPIData(environment_account_id string, namespace string, resource_typ
 	return bodyText, err
 }
 
-func GetPodList(environment_account_id string, namespace string, kind string) (*corev1.PodList, error) {
-	bodyText_all, err := GetK8sAPIData(environment_account_id, namespace, kind)
+func GetPodList(environment_account_id string, namespace string) (*corev1.PodList, error) {
+	bodyText_all, err := GetK8sAPIData(environment_account_id, namespace, "pods")
 	if err != nil {
 		return nil, err
 	}
