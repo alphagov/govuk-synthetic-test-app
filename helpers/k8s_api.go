@@ -22,8 +22,11 @@ const CERT_PATH string = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 const INTEGRATION_AWS_ACCOUNT_ID string = "210287912431"
 const STAGING_AWS_ACCOUNT_ID string = "696911096973"
 const PRODUCTION_AWS_ACCOUNT_ID string = "172025368201"
+const INTEGRATION string = "integration"
+const STAGING string = "staging"
+const PRODUCTION string = "production"
 
-func checkRunningInK8s() (bool, error) {
+func CheckRunningInK8s() (bool, error) {
 	if _, err := os.Stat(CERT_PATH); err != nil {
 		if os.IsNotExist(err) {
 			fmt.Printf("Can only run this code when inside a k8s pod\n")
@@ -35,8 +38,21 @@ func checkRunningInK8s() (bool, error) {
 	return true, nil
 }
 
-func GetK8sClient(ctx context.Context, environment_account_id string) (*http.Client, string, error) {
-	running_in_k8s, err := checkRunningInK8s()
+func GetEnvironmentAccountID(environment string) (string, error) {
+	switch environment {
+	case INTEGRATION:
+		return INTEGRATION_AWS_ACCOUNT_ID, nil
+	case STAGING:
+		return STAGING_AWS_ACCOUNT_ID, nil
+	case PRODUCTION:
+		return PRODUCTION_AWS_ACCOUNT_ID, nil
+	default:
+		return INTEGRATION, fmt.Errorf("ENVIRONMENT_NAME not set to integration, staging or production")
+	}
+}
+
+func GetK8sClient(ctx context.Context, environment string) (*http.Client, string, error) {
+	running_in_k8s, err := CheckRunningInK8s()
 	if err != nil {
 		return nil, "", err
 	} else if !running_in_k8s {
@@ -47,6 +63,12 @@ func GetK8sClient(ctx context.Context, environment_account_id string) (*http.Cli
 	if err != nil {
 		return nil, "", err
 	}
+
+	environment_account_id, err := GetEnvironmentAccountID(environment)
+	if err != nil {
+		return nil, "", err
+	}
+
 	tk, err := g.GetWithOptions(ctx, &token.GetTokenOptions{
 		Region:        "eu-west-1",
 		ClusterID:     "govuk",
@@ -75,8 +97,8 @@ func GetK8sClient(ctx context.Context, environment_account_id string) (*http.Cli
 	return client, tk.Token, nil
 }
 
-func GetK8sAPIData(ctx context.Context, environment_account_id string, namespace string, resource_type string) ([]byte, error) {
-	client, token, err := GetK8sClient(ctx, environment_account_id)
+func GetK8sAPIData(ctx context.Context, environment string, namespace string, resource_type string) ([]byte, error) {
+	client, token, err := GetK8sClient(ctx, environment)
 	if err != nil {
 		return nil, err
 	}
@@ -109,11 +131,11 @@ func GetK8sAPIData(ctx context.Context, environment_account_id string, namespace
 		return nil, err
 	}
 
-	return bodyText, err
+	return bodyText, nil
 }
 
-func GetPodList(ctx context.Context, environment_account_id string, namespace string) (*corev1.PodList, error) {
-	bodyText_all, err := GetK8sAPIData(ctx, environment_account_id, namespace, "pods")
+func GetPodList(ctx context.Context, environment string, namespace string) (*corev1.PodList, error) {
+	bodyText_all, err := GetK8sAPIData(ctx, environment, namespace, "pods")
 	if err != nil {
 		return nil, err
 	}
