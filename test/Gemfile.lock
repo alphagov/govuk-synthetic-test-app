@@ -18,6 +18,7 @@ GEM
       aws-eventstream (~> 1, >= 1.0.2)
     base64 (0.3.0)
     bigdecimal (3.3.1)
+    eventmachine (1.2.7)
     jmespath (1.6.2)
     logger (1.7.0)
 
@@ -29,6 +30,7 @@ DEPENDENCIES
   aws-sdk-core
   aws-sdk-eks
   aws-sigv4
+  eventmachine
 
 BUNDLED WITH
    2.7.2
