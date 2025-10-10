@@ -9,18 +9,18 @@ on:
         description: 'Commit, tag or branch name to build'
         required: true
         type: string
-        default: 'main'
+        default: 'test-ruby'
   push:
     branches:
-      - main
+      - test-ruby
 
 jobs:
   build-and-publish-runner-image:
     name: Build and publish runner image
     uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@main
     with:
-      dockerfilePath: ./runner.Dockerfile
-      imageName: govuk-synthetic-test-app-runner
+      dockerfilePath: ./test/test.Dockerfile
+      imageName: govuk-synthetic-test-app-runner-ruby
       gitRef: ${{ inputs.gitRef || github.ref }}
     permissions:
       id-token: write
