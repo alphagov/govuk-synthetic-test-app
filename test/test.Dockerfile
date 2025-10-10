@@ -1,9 +1,10 @@
 # FROM ruby:3.4.7-alpine3.22
-# RUN apk add --no-cache vim libxml2 openssl ruby-dev
+FROM ruby:3-alpine
+RUN apk add --no-cache vim libxml2 openssl ruby-dev
 
-FROM Ruby:2.7.8-buster
+# FROM ruby:2.7.8-buster
 
-RUN apt-get update && apt-get install -y vim libxml2-dev libssl-dev build-essential
+# RUN apt-get update && apt-get install -y vim libxml2-dev libssl-dev build-essential
 
 ARG USER=app
 ENV HOME=/home/$USER
