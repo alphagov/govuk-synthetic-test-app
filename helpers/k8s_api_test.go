@@ -49,9 +49,12 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 	Context("when trying to perform a DELETE, PATCH, POST, PUT with the k8s api on the apps namespace", func() {
 		DescribeTable("returns a 403 error with invalid operation",
 			func(ctx SpecContext, http_method string) {
-				client, token, _ := k8s_api.GetK8sClient(ctx, os.Getenv("ENVIRONMENT_NAME"))
-				url := k8s_api.API_SERVER + "/apps/pods"
+				cluster_endpoint, err := k8s_api.GetClusterEndpoint(ctx, os.Getenv("ENVIRONMENT_NAME"))
+				Expect(err).NotTo(HaveOccurred())
+				client, token, err := k8s_api.GetK8sClient(ctx, os.Getenv("ENVIRONMENT_NAME"))
+				Expect(err).NotTo(HaveOccurred())
 
+				url := cluster_endpoint + "/api/v1/namespaces/apps/pods"
 				req, err := http.NewRequest(http_method, url, nil)
 				Expect(err).NotTo(HaveOccurred())
 

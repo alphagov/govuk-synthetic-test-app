@@ -6,10 +6,19 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
+	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/eks"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	stsTypes "github.com/aws/aws-sdk-go-v2/service/sts/types"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	corev1 "k8s.io/api/core/v1"
@@ -17,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-const API_SERVER string = "https://kubernetes.default.svc/api/v1/namespaces"
 const CERT_PATH string = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 const INTEGRATION_AWS_ACCOUNT_ID string = "210287912431"
 const STAGING_AWS_ACCOUNT_ID string = "696911096973"
@@ -25,6 +33,8 @@ const PRODUCTION_AWS_ACCOUNT_ID string = "172025368201"
 const INTEGRATION string = "integration"
 const STAGING string = "staging"
 const PRODUCTION string = "production"
+const CLUSTER_ID string = "govuk"
+const REGION string = "eu-west-1"
 
 func CheckRunningInK8s() (bool, error) {
 	if _, err := os.Stat(CERT_PATH); err != nil {
@@ -70,8 +80,8 @@ func GetK8sClient(ctx context.Context, environment string) (*http.Client, string
 	}
 
 	tk, err := g.GetWithOptions(ctx, &token.GetTokenOptions{
-		Region:        "eu-west-1",
-		ClusterID:     "govuk",
+		Region:        REGION,
+		ClusterID:     CLUSTER_ID,
 		AssumeRoleARN: fmt.Sprintf("arn:aws:iam::%s:role/synthetic-test-assumed", environment_account_id),
 		SessionName:   "GovUKSyntheticTestApp",
 	})
@@ -89,12 +99,59 @@ func GetK8sClient(ctx context.Context, environment string) (*http.Client, string
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				RootCAs: caCertPool,
+				RootCAs:            caCertPool,
+				InsecureSkipVerify: true,
 			},
 		},
 	}
 
 	return client, tk.Token, nil
+}
+
+func GetClusterEndpoint(ctx context.Context, environment string) (string, error) {
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(REGION))
+	if err != nil {
+		return "", err
+	}
+	sourceAccount := sts.NewFromConfig(cfg)
+
+	environment_account_id, err := GetEnvironmentAccountID(environment)
+	if err != nil {
+		return "", err
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	response, err := sourceAccount.AssumeRole(
+		ctx,
+		&sts.AssumeRoleInput{
+			RoleArn:         aws.String(fmt.Sprintf("arn:aws:iam::%s:role/synthetic-test-assumed", environment_account_id)),
+			RoleSessionName: aws.String("GOVUK-Synthetic-Test-Assumed-" + strconv.Itoa(10000+rand.Intn(25000))),
+		})
+	if err != nil {
+		return "", err
+	}
+	var assumedRoleCreds *stsTypes.Credentials = response.Credentials
+
+	cfg, err = config.LoadDefaultConfig(
+		ctx,
+		config.WithRegion(REGION),
+		config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(
+				*assumedRoleCreds.AccessKeyId,
+				*assumedRoleCreds.SecretAccessKey,
+				*assumedRoleCreds.SessionToken)))
+	if err != nil {
+		return "", err
+	}
+
+	eks_client := eks.NewFromConfig(cfg)
+
+	cluster, err := eks_client.DescribeCluster(ctx, &eks.DescribeClusterInput{Name: aws.String(CLUSTER_ID)})
+	if err != nil {
+		return "", err
+	}
+
+	return *cluster.Cluster.Endpoint, nil
 }
 
 func GetK8sAPIData(ctx context.Context, environment string, namespace string, resource_type string) ([]byte, error) {
@@ -103,7 +160,9 @@ func GetK8sAPIData(ctx context.Context, environment string, namespace string, re
 		return nil, err
 	}
 
-	url, err := url.JoinPath(API_SERVER, namespace, resource_type)
+	cluster_endpoint, err := GetClusterEndpoint(ctx, environment)
+
+	url, err := url.JoinPath(fmt.Sprintf("%s/api/v1/namespaces", cluster_endpoint), namespace, resource_type)
 	if err != nil {
 		return nil, err
 	}
