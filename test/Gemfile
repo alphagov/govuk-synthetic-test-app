@@ -5,3 +5,4 @@ gem "aws-sdk-eks"
 gem "aws-sigv4"
 
 gem "eventmachine"
+gem "thin"
