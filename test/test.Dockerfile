@@ -18,5 +18,4 @@ RUN addgroup -g 800 $USER \
 USER $USER
 WORKDIR $HOME
 
-# RUN gem install eventmachine --source 'https://rubygems.org/' --  --with-cxxflags=-std=c++11
-RUN bundle install
+# RUN bundle install
