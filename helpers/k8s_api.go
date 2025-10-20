@@ -49,19 +49,6 @@ func CheckRunningInK8s() (bool, error) {
 	return true, nil
 }
 
-func GetEnvironmentAccountID(environment string) (string, error) {
-	switch environment {
-	case INTEGRATION:
-		return INTEGRATION_AWS_ACCOUNT_ID, nil
-	case STAGING:
-		return STAGING_AWS_ACCOUNT_ID, nil
-	case PRODUCTION:
-		return PRODUCTION_AWS_ACCOUNT_ID, nil
-	default:
-		return INTEGRATION, fmt.Errorf("ENVIRONMENT_NAME not set to integration, staging or production")
-	}
-}
-
 type K8sClient struct {
 	Client          *http.Client
 	Token           string
@@ -79,7 +66,22 @@ func (k *K8sClient) Get(url string) (*http.Response, error) {
 	return k.Client.Do(req)
 }
 
-func GetK8sClient(ctx context.Context, environment string) (*K8sClient, error) {
+func GetAwsAccountID(ctx context.Context) (string, error) {
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(REGION))
+	if err != nil {
+		return "", err
+	}
+	sourceAccount := sts.NewFromConfig(cfg)
+
+	callerIdentity, err := sourceAccount.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
+	if err != nil {
+		return "", err
+	}
+
+	return *callerIdentity.Account, nil
+}
+
+func GetK8sClient(ctx context.Context, environment_account_id string) (*K8sClient, error) {
 	running_in_k8s, err := CheckRunningInK8s()
 	if err != nil {
 		return nil, err
@@ -88,11 +90,6 @@ func GetK8sClient(ctx context.Context, environment string) (*K8sClient, error) {
 	}
 
 	g, err := token.NewGenerator(false, false)
-	if err != nil {
-		return nil, err
-	}
-
-	environment_account_id, err := GetEnvironmentAccountID(environment)
 	if err != nil {
 		return nil, err
 	}
@@ -166,12 +163,15 @@ func GetK8sClient(ctx context.Context, environment string) (*K8sClient, error) {
 	}, nil
 }
 
-func GetK8sAPIData(ctx context.Context, environment string, namespace string, resource_type string) ([]byte, error) {
-	client, err := GetK8sClient(ctx, environment)
+func GetK8sAPIData(ctx context.Context, environment_account_id string, namespace string, resource_type string) ([]byte, error) {
+	client, err := GetK8sClient(ctx, environment_account_id)
 	if err != nil {
 		return nil, err
 	}
 	url, err := url.JoinPath(namespace, resource_type)
+	if err != nil {
+		return nil, err
+	}
 
 	resp, err := client.Get(url)
 	if err != nil {
@@ -193,8 +193,8 @@ func GetK8sAPIData(ctx context.Context, environment string, namespace string, re
 	return bodyText, nil
 }
 
-func GetPodList(ctx context.Context, environment string, namespace string) (*corev1.PodList, error) {
-	bodyText_all, err := GetK8sAPIData(ctx, environment, namespace, "pods")
+func GetPodList(ctx context.Context, environment_account_id string, namespace string) (*corev1.PodList, error) {
+	bodyText_all, err := GetK8sAPIData(ctx, environment_account_id, namespace, "pods")
 	if err != nil {
 		return nil, err
 	}
