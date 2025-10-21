@@ -15,18 +15,14 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 	Context("when calling k8s api with apps namespace and pods kind", func() {
 		It("returns pods list and can access the first image value", func(ctx SpecContext) {
 			aws_account_id, err := k8s_api.GetAwsAccountID(ctx)
-			if err != nil {
-				GinkgoWriter.Printf("Error getting AWS account ID: %v\n", err)
-			}
+			Expect(err).NotTo(HaveOccurred())
 			podList, _ := k8s_api.GetPodList(ctx, aws_account_id, "apps")
 			GinkgoWriter.Printf("First pod image: %s, %s\n", podList.Items[0].Labels["app"], podList.Items[0].Spec.Containers[0].Image)
 			Expect(podList.Items[0].Spec.Containers[0].Image).NotTo(BeNil())
 		})
 		It("returns pods list and all pods are running with arch arm64", func(ctx SpecContext) {
 			aws_account_id, err := k8s_api.GetAwsAccountID(ctx)
-			if err != nil {
-				GinkgoWriter.Printf("Error getting AWS account ID: %v\n", err)
-			}
+			Expect(err).NotTo(HaveOccurred())
 			podList, _ := k8s_api.GetPodList(ctx, aws_account_id, "apps")
 			Expect(podList.Items[0].Labels["app.kubernetes.io/arch"]).To(Equal("arm64"))
 
@@ -43,9 +39,7 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 		DescribeTable("assumed role cannot access the namespace",
 			func(ctx SpecContext, namespace string) {
 				aws_account_id, err := k8s_api.GetAwsAccountID(ctx)
-				if err != nil {
-					GinkgoWriter.Printf("Error getting AWS account ID: %v\n", err)
-				}
+				Expect(err).NotTo(HaveOccurred())
 				podList, err := k8s_api.GetPodList(ctx, aws_account_id, namespace)
 				Expect(podList).To(BeNil())
 				Expect(err).To(HaveOccurred())
@@ -62,9 +56,7 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 		DescribeTable("returns a 403 error with invalid operation",
 			func(ctx SpecContext, http_method string) {
 				aws_account_id, err := k8s_api.GetAwsAccountID(ctx)
-				if err != nil {
-					GinkgoWriter.Printf("Error getting AWS account ID: %v\n", err)
-				}
+				Expect(err).NotTo(HaveOccurred())
 				client, err := k8s_api.GetK8sClient(ctx, aws_account_id)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -91,9 +83,7 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 
 	ctx := context.TODO()
 	aws_account_id, err := k8s_api.GetAwsAccountID(ctx)
-	if err != nil {
-		GinkgoWriter.Printf("Error getting AWS account ID: %v\n", err)
-	}
+	Expect(err).NotTo(HaveOccurred())
 
 	if aws_account_id == k8s_api.PRODUCTION_AWS_ACCOUNT_ID {
 		Context("when calling k8s api from the production account", func() {
