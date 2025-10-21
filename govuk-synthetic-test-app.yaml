@@ -10,7 +10,7 @@ spec:
     restartPolicy: Never
     containers:
       - name: govuk-synthetic-test-app-runner
-        image: 'ghcr.io/alphagov/govuk/govuk-synthetic-test-app-runner:049c0e947e715a45aae3c4ec6130578461925939'
+        image: 'ghcr.io/alphagov/govuk/govuk-synthetic-test-app:ba09f95ec441c9038ad603cc5d49fa244b407e25'
         imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
