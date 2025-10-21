@@ -1,18 +1,18 @@
-ARG ruby_version=3.3
-ARG base_image=ghcr.io/alphagov/govuk-ruby-base:$ruby_version
-ARG builder_image=ghcr.io/alphagov/govuk-ruby-builder:$ruby_version
+FROM golang:1.25.1-alpine3.22
 
-FROM --platform=$TARGETPLATFORM $builder_image AS builder
-WORKDIR $APP_HOME
-COPY Gemfile* .ruby-version ./
-RUN bundle install
-COPY . .
+ARG USER=app
+ENV HOME=/home/$USER
 
-FROM --platform=$TARGETPLATFORM $base_image
-WORKDIR $APP_HOME
-COPY --from=builder $BUNDLE_PATH $BUNDLE_PATH
-COPY --from=builder $APP_HOME .
+COPY . $HOME
 
-USER app
-EXPOSE 3000
-CMD rackup -o 0.0.0.0 -p 3000
+RUN addgroup -g 1000 $USER \
+    && adduser -u 1000 -G $USER -D $USER \
+    && chown -R $USER:$USER $HOME
+
+USER $USER
+WORKDIR $HOME
+
+RUN go mod vendor
+RUN go install github.com/onsi/ginkgo/v2/ginkgo
+
+CMD ["ginkgo", "-v", "helpers"]
