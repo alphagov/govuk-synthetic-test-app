@@ -1,0 +1,46 @@
+# original workflow - https://github.com/alphagov/govuk-infrastructure/blob/main/.github/workflows/codeql-analysis.yml
+# this file can be removed after merging the pull request to refactor the repo to remove the ruby app
+# the ci.yml file will need to be updated to use the govuk-infrastructure workflow
+name: CodeQL Analysis
+
+on:
+  workflow_call:
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 120
+
+    steps:
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        show-progress: false
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@16140ae1a102900babc80a33c44059580f687047 # v4.30.9
+      with:
+        languages: "go"
+        config: |
+          # initial configurations for CodeQL should be looking for high precision
+          # and high severity issues to ensure developers aren't compromised by false positives.
+
+          query-filters:
+            - include:
+                # alerts should only be raised for security issues to prevent being distracted with none security issues.
+                "tags contain": security
+                # High precision findings give the best likelihood that issues found are true positives.
+                precision:
+                  - high
+                  - very-high
+                # A security severity score of >=7 is classed as high or critical. This is an additional step to
+                # ensure that developers are not distracted by low severity, none issues.
+                # Explanation of security severity scores: https://docs.github.com/en/code-security/code-scanning/managing-code-scanning-alerts/about-code-scanning-alerts#about-security-severity-levels
+                security-severity: /([7-9]|10)\.(\d)+/
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@16140ae1a102900babc80a33c44059580f687047 # v4.30.9
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@16140ae1a102900babc80a33c44059580f687047 # v4.30.9
