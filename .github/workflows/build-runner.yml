@@ -19,7 +19,7 @@ jobs:
     name: Build and publish runner image
     uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@main
     with:
-      gitRef: ${{ inputs.gitRef || github.ref }}
+      gitRef: ${{ inputs.gitRef || github.event.release.tag_name }}
     permissions:
       id-token: write
       contents: read
