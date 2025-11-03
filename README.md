@@ -2,7 +2,24 @@
 
 This is a synthetic test app used to run Ginkgo tests to test aspects of the GOV.UK infrastructure.
 
-## Running Ginkgo tests
+## Deploying the tests on EKS
+
+To deploy the tests you will need to merge in your changes to the `main` branch and then update the image tag in the [govuk-helm-charts repo](https://github.com/alphagov/govuk-helm-charts/blob/main/charts/govuk-synthetic-test-app/values.yaml#L2) to the latest release.
+
+NOTE - 
+There is currently an issue with the ECR pull through cache which means that it is not able to pull the latest image from GHCR. So to manually pull the image through to ECR you will need to follow these steps - 
+
+- wait until the latest image is available on [GHCR](https://github.com/alphagov/govuk-synthetic-test-app/pkgs/container/govuk%2Fgovuk-synthetic-test-app)
+- assume your `fulladmin` role in the `production` environment
+- run these commands -
+
+```
+aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 172025368201.dkr.ecr.eu-west-1.amazonaws.com
+
+docker pull 172025368201.dkr.ecr.eu-west-1.amazonaws.com/github/alphagov/govuk/govuk-synthetic-test-app:<latest release version>
+```
+
+## Running Ginkgo tests locally
 
 NOTE - at the moment the tests only work when deployed on to an EKS cluster as it is using the synthetic-test-assumer role.
 
