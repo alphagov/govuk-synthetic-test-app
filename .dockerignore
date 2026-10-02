@@ -1,2 +1,4 @@
 environment.sh
-vendor
+vendor/
+*.yaml
+scripts/
