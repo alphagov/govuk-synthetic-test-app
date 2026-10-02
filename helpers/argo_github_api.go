@@ -85,19 +85,19 @@ func GetPodImageDetails(ctx context.Context, k8sClient *K8sClient, namespace, ap
 	// We need to find the pods. The user's requirement says "query the k8s api and validate that the correct image version is deployed"
 	// We can use the existing GetPodList but it's a bit limited.
 	// Let's use a more direct way to get the pod image.
-	
+
 	// The label selector should be something like "app.kubernetes.io/name=govuk-synthetic-test-app"
 	// But the user said "inspect the status of the govuk-synthetic-test-app-canary application"
 	// So the pod might have a label related to that.
-	
+
 	// Let's assume the pod has a label "app=govuk-synthetic-test-app-canary" or similar.
 	// Actually, let's use the GetPodList we already have.
-	
+
 	// Note: GetPodList uses GetK8sAPIData which uses the old Get (with /api/v1/namespaces/...)
 	// But I changed Get to be generic. I should update GetPodList too.
-	
+
 	// Wait, I'll just implement a new one that uses the generic Get.
-	
+
 	url := fmt.Sprintf("/api/v1/namespaces/%s/pods?labelSelector=%s", namespace, appLabelSelector)
 	resp, err := k8sClient.Get(url)
 	if err != nil {
