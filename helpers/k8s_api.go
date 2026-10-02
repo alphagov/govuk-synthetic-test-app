@@ -27,12 +27,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-const CERT_PATH string = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-const INTEGRATION_AWS_ACCOUNT_ID string = "210287912431"
-const STAGING_AWS_ACCOUNT_ID string = "696911096973"
-const PRODUCTION_AWS_ACCOUNT_ID string = "172025368201"
-const CLUSTER_ID string = "govuk"
-const REGION string = "eu-west-1"
+const (
+	CERT_PATH                  string = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	INTEGRATION_AWS_ACCOUNT_ID string = "210287912431"
+	STAGING_AWS_ACCOUNT_ID     string = "696911096973"
+	PRODUCTION_AWS_ACCOUNT_ID  string = "172025368201"
+	CLUSTER_ID                 string = "govuk"
+	REGION                     string = "eu-west-1"
+	ASSUME_ROLE_NAME           string = "synthetic-test-assumer"
+)
 
 func CheckRunningInK8s() (bool, error) {
 	if _, err := os.Stat(CERT_PATH); err != nil {
@@ -78,13 +81,15 @@ func GetAwsAccountID(ctx context.Context) (string, error) {
 	return *callerIdentity.Account, nil
 }
 
-func GetK8sClient(ctx context.Context, environment_account_id string) (*K8sClient, error) {
+func GetK8sClient(ctx context.Context, accountID string, clusterID string, roleName string) (*K8sClient, error) {
 	running_in_k8s, err := CheckRunningInK8s()
 	if err != nil {
 		return nil, err
 	} else if !running_in_k8s {
 		return nil, nil
 	}
+
+	assumeRoleARN := fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, roleName)
 
 	g, err := token.NewGenerator(false, false)
 	if err != nil {
@@ -93,8 +98,8 @@ func GetK8sClient(ctx context.Context, environment_account_id string) (*K8sClien
 
 	tk, err := g.GetWithOptions(ctx, &token.GetTokenOptions{
 		Region:        REGION,
-		ClusterID:     CLUSTER_ID,
-		AssumeRoleARN: fmt.Sprintf("arn:aws:iam::%s:role/synthetic-test-assumed", environment_account_id),
+		ClusterID:     clusterID,
+		AssumeRoleARN: assumeRoleARN,
 		SessionName:   "GovUKSyntheticTestApp",
 	})
 	if err != nil {
@@ -111,7 +116,7 @@ func GetK8sClient(ctx context.Context, environment_account_id string) (*K8sClien
 	response, err := sourceAccount.AssumeRole(
 		ctx,
 		&sts.AssumeRoleInput{
-			RoleArn:         aws.String(fmt.Sprintf("arn:aws:iam::%s:role/synthetic-test-assumed", environment_account_id)),
+			RoleArn:         aws.String(assumeRoleARN),
 			RoleSessionName: aws.String("GOVUK-Synthetic-Test-Assumed-" + strconv.Itoa(10000+rand.Intn(25000))),
 		})
 	if err != nil {
@@ -133,7 +138,7 @@ func GetK8sClient(ctx context.Context, environment_account_id string) (*K8sClien
 
 	eks_client := eks.NewFromConfig(cfg)
 
-	cluster, err := eks_client.DescribeCluster(ctx, &eks.DescribeClusterInput{Name: aws.String(CLUSTER_ID)})
+	cluster, err := eks_client.DescribeCluster(ctx, &eks.DescribeClusterInput{Name: aws.String(clusterID)})
 	if err != nil {
 		return nil, err
 	}
@@ -160,8 +165,8 @@ func GetK8sClient(ctx context.Context, environment_account_id string) (*K8sClien
 	}, nil
 }
 
-func GetK8sAPIData(ctx context.Context, environment_account_id string, namespace string, resource_type string) ([]byte, error) {
-	client, err := GetK8sClient(ctx, environment_account_id)
+func GetK8sAPIData(ctx context.Context, accountID string, clusterID string, roleName string, namespace string, resource_type string) ([]byte, error) {
+	client, err := GetK8sClient(ctx, accountID, clusterID, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -190,8 +195,8 @@ func GetK8sAPIData(ctx context.Context, environment_account_id string, namespace
 	return bodyText, nil
 }
 
-func GetPodList(ctx context.Context, environment_account_id string, namespace string) (*corev1.PodList, error) {
-	bodyText_all, err := GetK8sAPIData(ctx, environment_account_id, namespace, "pods")
+func GetPodList(ctx context.Context, accountID string, clusterID string, roleName string, namespace string) (*corev1.PodList, error) {
+	bodyText_all, err := GetK8sAPIData(ctx, accountID, clusterID, roleName, namespace, "pods")
 	if err != nil {
 		return nil, err
 	}

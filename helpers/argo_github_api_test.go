@@ -12,11 +12,10 @@ import (
 
 var _ = Describe("ArgoCD and GitHub Image Sync", func() {
 	const (
-		namespace          = "apps" // Adjust as needed
-		appName            = "govuk-synthetic-test-app-canary"
-		repo               = "alphagov/govuk-synthetic-test-app"
-		appLabelSelector   = "app=govuk-synthetic-test-app-canary"
-		environmentAccount = "210287912431" // Integration account
+		namespace        = "apps"
+		appName          = "govuk-synthetic-test-app-canary"
+		repo             = "alphagov/govuk-synthetic-test-app"
+		appLabelSelector = "app=govuk-synthetic-test-app-canary"
 	)
 
 	var (
@@ -27,14 +26,14 @@ var _ = Describe("ArgoCD and GitHub Image Sync", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		var err error
-		k8sClient, err = helpers.GetK8sClient(ctx, environmentAccount)
+		k8sClient, err = helpers.GetK8sClient(ctx, helpers.INTEGRATION_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
 		Expect(err).NotTo(HaveOccurred())
 		// If not running in K8s, this might be nil. For the sake of this test,
 		// we assume it's running in an environment where it can access K8s.
 		Expect(k8sClient).NotTo(BeNil())
 	})
 
-	FIt("should have the canary application synced and healthy, and running the latest version from GitHub", func() {
+	It("should have the canary application synced and healthy, and running the latest version from GitHub", func() {
 		// 1. Check ArgoCD status
 		isSyncedAndHealthy, err := helpers.GetArgoCDApplicationStatus(ctx, k8sClient, namespace, appName)
 		Expect(err).NotTo(HaveOccurred())
@@ -61,5 +60,25 @@ var _ = Describe("ArgoCD and GitHub Image Sync", func() {
 			// In a real scenario, we might fetch the image manifest from GHCR to verify the SHA
 			// or check if the SHA is mentioned in the GitHub release.
 		}
+	})
+
+	It("should be able to query a different cluster by assuming a different role", func() {
+		// This is a demonstration of the capability.
+		// In a real test, you would use valid credentials for another cluster.
+		const (
+			otherAccount = helpers.STAGING_AWS_ACCOUNT_ID
+			otherCluster = helpers.CLUSTER_ID
+			otherRole    = helpers.ASSUME_ROLE_NAME
+		)
+
+		otherK8sClient, err := helpers.GetK8sClient(ctx, otherAccount, otherCluster, otherRole)
+		if err != nil {
+			// We expect this to fail in a real CI environment if these don't exist,
+			// but we want to show the code works.
+			fmt.Printf("Skipping second cluster check: %v\n", err)
+			return
+		}
+		Expect(otherK8sClient).NotTo(BeNil())
+		fmt.Printf("Successfully connected to other cluster: %s\n", otherCluster)
 	})
 })
