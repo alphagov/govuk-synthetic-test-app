@@ -53,7 +53,7 @@ type K8sClient struct {
 }
 
 func (k *K8sClient) Get(url string) (*http.Response, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/namespaces/%s", k.ClusterEndpoint, url), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", k.ClusterEndpoint, url), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func GetK8sAPIData(ctx context.Context, environment_account_id string, namespace
 	if err != nil {
 		return nil, err
 	}
-	url, err := url.JoinPath(namespace, resource_type)
+	url, err := url.JoinPath("api", "v1", "namespaces", namespace, resource_type)
 	if err != nil {
 		return nil, err
 	}
@@ -196,13 +196,13 @@ func GetPodList(ctx context.Context, environment_account_id string, namespace st
 		return nil, err
 	}
 
-	// https://godoc.org/k8s.io/apimachinery/pkg/runtime#Scheme
 	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
 
-	// https://godoc.org/k8s.io/apimachinery/pkg/runtime/serializer#CodecFactory
 	codecFactory := serializer.NewCodecFactory(scheme)
 
-	// https://godoc.org/k8s.io/apimachinery/pkg/runtime#Decoder
 	deserializer := codecFactory.UniversalDeserializer()
 
 	podObject, _, err := deserializer.Decode(bodyText_all, nil, &corev1.PodList{})
