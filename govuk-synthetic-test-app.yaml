@@ -6,25 +6,26 @@ metadata:
     app: govuk-synthetic-test-app-runner
     app.kubernetes.io/name: govuk-synthetic-test-app-runner
 spec:
-    serviceAccountName: synthetic-test-assumer
-    restartPolicy: Never
-    containers:
-      - name: govuk-synthetic-test-app-runner
-        image: 'ghcr.io/alphagov/govuk/govuk-synthetic-test-app:ba09f95ec441c9038ad603cc5d49fa244b407e25'
-        imagePullPolicy: Always
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop: ["ALL"]
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 1000
-      runAsGroup: 1000
-      fsGroup: 1000
-      seccompProfile:
-        type: RuntimeDefault
-    tolerations:
-      - key: arch
-        operator: Equal
-        value: arm64
-        effect: NoSchedule
+  serviceAccountName: synthetic-test-assumer
+  restartPolicy: Never
+  containers:
+    - name: govuk-synthetic-test-app-runner
+      image: "ghcr.io/alphagov/govuk/govuk-synthetic-test-app:pipeline-test-1"
+      # image: 'ghcr.io/alphagov/govuk/govuk-synthetic-test-app:ba09f95ec441c9038ad603cc5d49fa244b407e25'
+      imagePullPolicy: Always
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  tolerations:
+    - key: arch
+      operator: Equal
+      value: arm64
+      effect: NoSchedule
