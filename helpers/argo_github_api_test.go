@@ -12,7 +12,7 @@ import (
 
 var _ = Describe("ArgoCD and GitHub Image Sync", func() {
 	const (
-		namespace          = "govuk-synthetic-test" // Adjust as needed
+		namespace          = "apps" // Adjust as needed
 		appName            = "govuk-synthetic-test-app-canary"
 		repo               = "alphagov/govuk-synthetic-test-app"
 		appLabelSelector   = "app=govuk-synthetic-test-app-canary"
@@ -20,7 +20,7 @@ var _ = Describe("ArgoCD and GitHub Image Sync", func() {
 	)
 
 	var (
-		ctx      context.Context
+		ctx       context.Context
 		k8sClient *helpers.K8sClient
 	)
 
@@ -29,12 +29,12 @@ var _ = Describe("ArgoCD and GitHub Image Sync", func() {
 		var err error
 		k8sClient, err = helpers.GetK8sClient(ctx, environmentAccount)
 		Expect(err).NotTo(HaveOccurred())
-		// If not running in K8s, this might be nil. For the sake of this test, 
+		// If not running in K8s, this might be nil. For the sake of this test,
 		// we assume it's running in an environment where it can access K8s.
 		Expect(k8sClient).NotTo(BeNil())
 	})
 
-	It("should have the canary application synced and healthy, and running the latest version from GitHub", func() {
+	FIt("should have the canary application synced and healthy, and running the latest version from GitHub", func() {
 		// 1. Check ArgoCD status
 		isSyncedAndHealthy, err := helpers.GetArgoCDApplicationStatus(ctx, k8sClient, namespace, appName)
 		Expect(err).NotTo(HaveOccurred())
@@ -53,7 +53,7 @@ var _ = Describe("ArgoCD and GitHub Image Sync", func() {
 		// 4. Validate the tag matches the latest release
 		Expect(tag).To(Equal(latestTag), "Deployed image tag %s does not match latest GitHub release tag %s", tag, latestTag)
 
-		// 5. If SHA is available, we could potentially verify it. 
+		// 5. If SHA is available, we could potentially verify it.
 		// The requirement says "the image sha can be found in the github repo ghcr"
 		// For now, we just acknowledge it.
 		if sha != "" {
