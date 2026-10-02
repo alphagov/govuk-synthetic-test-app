@@ -21,20 +21,21 @@ type ArgoCDApplicationStatus struct {
 }
 
 func GetArgoCDApplicationStatus(ctx context.Context, k8sClient *K8sClient, namespace, appName string) (bool, error) {
-	url := fmt.Sprintf("/apis/argoproj.io/v1alpha1/namespaces/%s/applications/%s", namespace, appName)
+	// ArgoCD Applications are cluster-scoped resources, so they do not reside in a namespace.
+	url := fmt.Sprintf("/apis/argoproj.io/v1alpha1/applications/%s", appName)
 	resp, err := k8sClient.Get(url)
 	if err != nil {
 		return false, err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		return false, fmt.Errorf("failed to get ArgoCD application: %s", resp.Status)
-	}
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return false, err
+	}
+
+	if resp.StatusCode != 200 {
+		return false, fmt.Errorf("failed to get ArgoCD application: %s %s", resp.Status, body)
 	}
 
 	var app ArgoCDApplicationStatus

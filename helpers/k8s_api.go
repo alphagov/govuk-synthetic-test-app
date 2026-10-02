@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -56,7 +57,8 @@ type K8sClient struct {
 }
 
 func (k *K8sClient) Get(url string) (*http.Response, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", k.ClusterEndpoint, url), nil)
+	fullURL := strings.TrimPrefix(url, "/")
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", k.ClusterEndpoint, fullURL), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +91,7 @@ func GetK8sClient(ctx context.Context, accountID string, clusterID string, roleN
 		return nil, nil
 	}
 
-	assumeRoleARN := fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, roleName)
+	assumeRoleARN := fmt.Sprintf("arn:aws:iam::%s:role/synthetic-test-assumed", accountID)
 
 	g, err := token.NewGenerator(false, false)
 	if err != nil {
