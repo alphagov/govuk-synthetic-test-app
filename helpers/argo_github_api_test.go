@@ -39,17 +39,17 @@ var _ = Describe("ArgoCD and GitHub Image Sync. Given the canary application it 
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	FIt("should be able to query argo and the cluster from the same cluster the tests are ran from (staging)", func(ctx context.Context) {
-		intClient, err := helpers.GetK8sClient(ctx, helpers.STAGING_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
+	It("should be able to query argo and the cluster from the same cluster the tests are ran from (production)", func(ctx context.Context) {
+		prodClient, err := helpers.GetK8sClient(ctx, helpers.PRODUCTION_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(intClient).NotTo(BeNil())
+		Expect(prodClient).NotTo(BeNil())
 
-		isSyncedAndHealthy, err := helpers.GetArgoCDApplicationStatus(ctx, intClient, applicationCrdNs, appName)
+		isSyncedAndHealthy, err := helpers.GetArgoCDApplicationStatus(ctx, prodClient, applicationCrdNs, appName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(isSyncedAndHealthy).To(BeTrue(), "ArgoCD application %s should be Synced and Healthy", appName)
 
-		tag, sha, err := helpers.GetPodImageDetails(ctx, intClient, namespace, appLabelSelector)
+		tag, sha, err := helpers.GetPodImageDetails(ctx, prodClient, namespace, appLabelSelector)
 		Expect(err).NotTo(HaveOccurred())
 		fmt.Printf("Deployed image tag: %s, SHA: %s\n", tag, sha)
 
@@ -58,7 +58,26 @@ var _ = Describe("ArgoCD and GitHub Image Sync. Given the canary application it 
 		Expect(sha).To(Equal(digest), "Deplod sha does not match the latest digest pulled from ghcr", sha, digest)
 	})
 
-	It("should be able to query a different cluster (integration) by assuming a different role", func(ctx context.Context) {
+	It("should be able to query a different cluster (staging) by assuming a different role", func(ctx context.Context) {
+		stagingClient, err := helpers.GetK8sClient(ctx, helpers.STAGING_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(stagingClient).NotTo(BeNil())
+
+		isSyncedAndHealthy, err := helpers.GetArgoCDApplicationStatus(ctx, stagingClient, applicationCrdNs, appName)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(isSyncedAndHealthy).To(BeTrue(), "ArgoCD application %s should be Synced and Healthy", appName)
+
+		tag, sha, err := helpers.GetPodImageDetails(ctx, stagingClient, namespace, appLabelSelector)
+		Expect(err).NotTo(HaveOccurred())
+		fmt.Printf("Deployed image tag: %s, SHA: %s\n", tag, sha)
+
+		Expect(tag).To(Equal(latestTag), "Deployed image tag %s does not match latest GitHub release tag %s", tag, latestTag)
+
+		Expect(sha).To(Equal(digest), "Deplod sha does not match the latest digest pulled from ghcr", sha, digest)
+	})
+
+	FIt("should be able to query a different cluster (integration) by assuming a different role", func(ctx context.Context) {
 		stagingClient, err := helpers.GetK8sClient(ctx, helpers.INTEGRATION_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
 		Expect(err).NotTo(HaveOccurred())
 
