@@ -63,7 +63,7 @@ func (k *K8sClient) Get(url string) (*http.Response, error) {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+k.Token)
-	req.Header.Set("Accept", "application/yaml")
+	req.Header.Set("Accept", "application/json")
 
 	return k.Client.Do(req)
 }
@@ -84,10 +84,10 @@ func GetAwsAccountID(ctx context.Context) (string, error) {
 }
 
 func GetK8sClient(ctx context.Context, accountID string, clusterID string, roleName string) (*K8sClient, error) {
-	running_in_k8s, err := CheckRunningInK8s()
+	runningInK8s, err := CheckRunningInK8s()
 	if err != nil {
 		return nil, err
-	} else if !running_in_k8s {
+	} else if !runningInK8s {
 		return nil, nil
 	}
 
