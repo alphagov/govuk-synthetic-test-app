@@ -66,6 +66,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 
 	BeforeAll(func(ctx SpecContext) {
 		// TODO: create new release / or bump .version file by pushing to main
+		// TODO: weave context with cancel into all the functions
 		token, err = helpers.GetGHCRToken(ctx, containerPath)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -117,7 +118,10 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 			Expect(tag).To(Equal(latestTag), "Deployed image tag %s does not match latest GitHub release tag %s", tag, latestTag)
 
 			Expect(sha).To(Equal(digest), "Deplod sha does not match the latest digest pulled from ghcr", sha, digest)
-			// TODO: hit the actual app endpoint directly and verify it displays the correct version
+
+			displayedVersion, err := helpers.GetVersionFromApp(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(displayedVersion).To(Equal(latestTag))
 		},
 
 		Entry(

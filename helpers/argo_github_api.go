@@ -322,6 +322,35 @@ func GetImageTagFromChartRepo(env string) (string, error) {
 	return fileContent.ImageTag, nil
 }
 
+func GetVersionFromApp(ctx context.Context) (string, error) {
+	resp, err := http.Get("http://govuk-synthetic-test-app-canary.apps.svc.cluster.local")
+	if err != nil {
+		return "", fmt.Errorf("failed to perform GET request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to fetch URL: %s", resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var pageContent string
+	err = yaml.Unmarshal(body, &pageContent)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal YAML: %w", err)
+	}
+
+	if pageContent == "" {
+		return "", fmt.Errorf("image_tag not found in the YAML content")
+	}
+
+	return pageContent, nil
+}
+
 func getAppPodIndexes(podList PodList) (int, int) {
 	for pIdx, p := range podList.Items {
 		for cIdx, c := range p.Status.ContainerStatuses {
