@@ -10,6 +10,12 @@ import (
 	"github.com/alphagov/govuk-synthetic-test-app/helpers"
 )
 
+var (
+	intClient     *helpers.K8sClient
+	stagingClient *helpers.K8sClient
+	prodClient    *helpers.K8sClient
+)
+
 func buildDeployLabels(tag, env string) string {
 	return fmt.Sprintf("repoName=govuk-synthetic-test-app-canary,imageTag=%s,workflows.argoproj.io/workflow-template=deploy-image,environment=%s", tag, env)
 }
@@ -18,8 +24,25 @@ func buildPostSyncLabels(tag string) string {
 	return fmt.Sprintf("repoName=govuk-synthetic-test-app-canary,imageTag=%s,workflows.argoproj.io/workflow-template=post-sync", tag)
 }
 
-var _ = Describe("ArgoCD and GitHub Image Sync. Given the canary application it should be synced, healthy, and running the latest version from GitHub tag / container sha", Ordered, func() {
-	SetDefaultEventuallyTimeout(10 * time.Minute)
+var _ = BeforeSuite(func(ctx SpecContext) {
+	By("bootstrapping k8s clients for different environments")
+	var err error
+
+	intClient, err = helpers.GetK8sClient(ctx, helpers.INTEGRATION_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(intClient).NotTo(BeNil())
+
+	stagingClient, err = helpers.GetK8sClient(ctx, helpers.STAGING_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(stagingClient).NotTo(BeNil())
+
+	prodClient, err = helpers.GetK8sClient(ctx, helpers.PRODUCTION_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(prodClient).NotTo(BeNil())
+})
+
+var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary application SHOULD be synced, healthy, and running the latest version from GitHub tag / container sha", Ordered, func() {
+	SetDefaultEventuallyTimeout(2 * time.Minute)
 	SetDefaultEventuallyPollingInterval(10 * time.Second)
 
 	const (
@@ -35,13 +58,10 @@ var _ = Describe("ArgoCD and GitHub Image Sync. Given the canary application it 
 	)
 
 	var (
-		digest        string
-		token         string
-		latestTag     string
-		intClient     *helpers.K8sClient
-		stagingClient *helpers.K8sClient
-		prodClient    *helpers.K8sClient
-		err           error
+		digest    string
+		token     string
+		latestTag string
+		err       error
 	)
 
 	BeforeAll(func(ctx SpecContext) {
@@ -55,22 +75,14 @@ var _ = Describe("ArgoCD and GitHub Image Sync. Given the canary application it 
 
 		digest, err = helpers.GetGHCRImageDigest(ctx, containerPath, latestTag, token)
 		Expect(err).NotTo(HaveOccurred())
-
-		intClient, err = helpers.GetK8sClient(ctx, helpers.INTEGRATION_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(intClient).NotTo(BeNil())
-
-		stagingClient, err = helpers.GetK8sClient(ctx, helpers.STAGING_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(intClient).NotTo(BeNil())
-
-		prodClient, err = helpers.GetK8sClient(ctx, helpers.PRODUCTION_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(intClient).NotTo(BeNil())
+		fmt.Printf("Latest GitHub container digest: %s\n", digest)
 	})
 
-	DescribeTable("Extracting the author's first and last name", Ordered,
-		func(ctx SpecContext, envClient *helpers.K8sClient, env string) {
+	DescribeTable("Query each state of the deployment pipeline", Ordered,
+		func(ctx SpecContext, getEnvClient, getProdClient func() *helpers.K8sClient, env string) {
+			envClient := getEnvClient()
+			prodClient := getProdClient()
+
 			verifyPostSyncWorkflow := func(g Gomega) {
 				postSyncLabel := buildPostSyncLabels(latestTag)
 
@@ -108,8 +120,25 @@ var _ = Describe("ArgoCD and GitHub Image Sync. Given the canary application it 
 			// TODO: hit the actual app endpoint directly and verify it displays the correct version
 		},
 
-		Entry("WHEN the environment is INTEGRATION", intClient, integration),
-		Entry("WHEN the environment is STAGING", stagingClient, staging),
-		Entry("WHEN the environment is PRODUCTION", prodClient, production),
+		Entry(
+			"WHEN the environment is INTEGRATION",
+			func() *helpers.K8sClient { return intClient },
+			func() *helpers.K8sClient { return prodClient },
+			integration,
+		),
+
+		Entry(
+			"WHEN the environment is STAGING",
+			func() *helpers.K8sClient { return stagingClient },
+			func() *helpers.K8sClient { return prodClient },
+			staging,
+		),
+
+		Entry(
+			"WHEN the environment is PRODUCTION",
+			func() *helpers.K8sClient { return prodClient },
+			func() *helpers.K8sClient { return prodClient },
+			production,
+		),
 	)
 })

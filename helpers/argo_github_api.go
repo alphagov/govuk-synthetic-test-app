@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -18,13 +19,11 @@ type HelmChartImageTag struct {
 }
 
 type ArgoWorkflowStatus struct {
-	Status struct {
-		Items []struct {
-			Status struct {
-				Phase string `json:"phase"`
-			} `json:"status"`
-		} `json:"items"`
-	}
+	Items []struct {
+		Status struct {
+			Phase string `json:"phase"`
+		} `json:"status"`
+	} `json:"items"`
 }
 
 type ArgoCDApplicationStatus struct {
@@ -69,7 +68,8 @@ type GitHubTag struct {
 }
 
 func GetArgoWorkflowStatus(ctx context.Context, k8sClient *K8sClient, namespace, labels string) (bool, error) {
-	url := fmt.Sprintf("/apis/argoproj.io/v1/namespaces/%s/workflows?labelSelector=%s", namespace, labels)
+	encodedLabels := url.QueryEscape(labels)
+	url := fmt.Sprintf("/apis/argoproj.io/v1alpha1/namespaces/%s/workflows?labelSelector=%s", namespace, encodedLabels)
 	resp, err := k8sClient.Get(url)
 	if err != nil {
 		fmt.Printf("Error reading resp: %v", resp)
@@ -92,7 +92,7 @@ func GetArgoWorkflowStatus(ctx context.Context, k8sClient *K8sClient, namespace,
 		return false, err
 	}
 
-	return workflow.Status.Items[0].Status.Phase == "Succeeded", nil
+	return workflow.Items[0].Status.Phase == "Succeeded", nil
 }
 
 func GetArgoCDApplicationStatus(ctx context.Context, k8sClient *K8sClient, namespace, appName string) (bool, error) {
