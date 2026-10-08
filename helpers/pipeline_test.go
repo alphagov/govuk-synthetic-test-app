@@ -98,28 +98,32 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 		Eventually(verifyReleaseWorkflow).
 			WithContext(ctx).
 			WithArguments(trimmedHeadSha, githubAccessToken).
-			WithTimeout(2 * time.Minute).
+			WithTimeout(5 * time.Minute).
+			WithPolling(30 * time.Second).
 			Should(Succeed())
 
 		Eventually(verifyDeployWorkflow).
 			WithContext(ctx).
 			WithArguments(trimmedHeadSha, githubAccessToken).
-			WithTimeout(4 * time.Minute).
+			WithTimeout(5 * time.Minute).
+			WithPolling(30 * time.Second).
 			Should(Succeed())
 
 		latestTag, err = helpers.GetLatestGitHubReleaseTag(ctx, repo)
 		Expect(err).NotTo(HaveOccurred())
-		fmt.Printf("Latest GitHub release tag: %s\n", latestTag)
+		GinkgoLogr.Info("Latest GitHub release tag: %s\n", latestTag)
 
 		digest, err = helpers.GetGHCRImageDigest(ctx, containerPath, latestTag, token)
 		Expect(err).NotTo(HaveOccurred())
-		fmt.Printf("Latest GitHub container digest: %s\n", digest)
+		GinkgoLogr.Info("Latest GitHub container digest: %s\n", digest)
 	})
 
 	DescribeTable("Query each state of the deployment pipeline", Ordered,
 		func(ctx SpecContext, getEnvClient, getProdClient func() *helpers.K8sClient, env string) {
 			envClient := getEnvClient()
 			prodClient := getProdClient()
+
+			GinkgoLogr.Info("[%s] Checking status of the the deployment", env)
 
 			verifyPostSyncWorkflow := func(g Gomega, ctx context.Context, envClient *helpers.K8sClient, latestTag, appsNs string) {
 				postSyncLabel := buildPostSyncLabels(latestTag)
@@ -144,32 +148,61 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 			Eventually(verifyPostSyncWorkflow).
 				WithContext(ctx).
 				WithArguments(envClient, latestTag, appsNs).
-				WithTimeout(20 * time.Minute).
+				WithTimeout(10 * time.Minute).
 				WithPolling(1 * time.Minute).
 				Should(Succeed())
+
+			GinkgoLogr.Info("[%s] Argo Workflow Post Sync is successful", env)
 
 			Eventually(verifyDeployImageWorkflow).
 				WithContext(ctx).
 				WithArguments(prodClient, latestTag, appsNs).
-				WithTimeout(20 * time.Minute).
+				WithTimeout(10 * time.Minute).
 				WithPolling(1 * time.Minute).
 				Should(Succeed())
+
+			GinkgoLogr.Info("[%s] Argo Workflow Deploy Image is successful", env)
 
 			isSyncedAndHealthy, err := helpers.GetArgoCDApplicationStatus(ctx, envClient, applicationCrdNs, appName)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(isSyncedAndHealthy).To(BeTrue(), "ArgoCD application %s should be Synced and Healthy", appName)
 
-			tag, sha, err := helpers.GetPodImageDetails(ctx, envClient, appsNs, appLabelSelector)
-			Expect(err).NotTo(HaveOccurred())
-			fmt.Printf("Deployed image tag: %s, SHA: %s\n", tag, sha)
+			GinkgoLogr.Info("[%s] Argo CD govuk-synthetic-test-app-canary is synced and healthy", env)
 
-			Expect(tag).To(Equal(latestTag), "Deployed image tag %s does not match latest GitHub release tag %s", tag, latestTag)
+			verifyPodImage := func(g Gomega, ctx context.Context, envClient *helpers.K8sClient, appsNs, appLabelSelector string) {
+				tag, sha, err := helpers.GetPodImageDetails(ctx, envClient, appsNs, appLabelSelector)
+				g.Expect(err).NotTo(HaveOccurred())
 
-			Expect(sha).To(Equal(digest), "Deplod sha does not match the latest digest pulled from ghcr", sha, digest)
+				GinkgoLogr.Info("[%s] Deployed image tag: %s, SHA: %s\n", env, tag, sha)
 
-			displayedVersion, err := helpers.GetVersionFromApp(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(displayedVersion).To(Equal(latestTag))
+				g.Expect(tag).To(Equal(latestTag), "Deployed image tag %s does not match latest GitHub release tag %s", tag, latestTag)
+
+				g.Expect(sha).To(Equal(digest), "Deplod sha does not match the latest digest pulled from ghcr", sha, digest)
+			}
+
+			Eventually(verifyPodImage).
+				WithContext(ctx).
+				WithArguments(envClient, appsNs, appLabelSelector).
+				WithTimeout(20 * time.Minute).
+				WithPolling(1 * time.Minute).
+				Should(Succeed())
+
+			GinkgoLogr.Info("[%s] Release has rolled out successfully and the deployed tag and sha are correct", env)
+
+			verifyVersionDisplayedInApp := func(g Gomega, ctx context.Context, latestTag string) {
+				displayedVersion, err := helpers.GetVersionFromApp(ctx)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(displayedVersion).To(Equal(latestTag))
+			}
+
+			Eventually(verifyVersionDisplayedInApp).
+				WithContext(ctx).
+				WithArguments(latestTag).
+				WithTimeout(20 * time.Minute).
+				WithPolling(1 * time.Minute).
+				Should(Succeed())
+
+			GinkgoLogr.Info("[%s] Application is serving the new data", env)
 		},
 
 		Entry(
