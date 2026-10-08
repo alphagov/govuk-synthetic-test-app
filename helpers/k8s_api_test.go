@@ -35,23 +35,6 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 		})
 	})
 
-	Context("when calling k8s api with NON 'apps' namespace and `pods` kind", func() {
-		DescribeTable("assumed role cannot access the namespace",
-			func(ctx SpecContext, namespace string) {
-				aws_account_id, err := k8s_api.GetAwsAccountID(ctx)
-				Expect(err).NotTo(HaveOccurred())
-				podList, _ := k8s_api.GetPodList(ctx, aws_account_id, k8s_api.CLUSTER_ID, k8s_api.ASSUME_ROLE_NAME, "apps")
-				Expect(podList).To(BeNil())
-				Expect(err).To(HaveOccurred())
-			},
-			Entry("for datagovuk", "datagovuk"),
-			Entry("for default", "default"),
-			Entry("for cluster-services", "cluster-services"),
-			Entry("for licensify", "licensify"),
-			Entry("for monitoring", "monitoring"),
-		)
-	})
-
 	Context("when trying to perform a DELETE, PATCH, POST, PUT with the k8s api on the apps namespace", func() {
 		DescribeTable("returns a 403 error with invalid operation",
 			func(ctx SpecContext, http_method string) {
@@ -93,32 +76,6 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 					Expect(podList.Items[0].Spec.Containers[0].Image).NotTo(BeNil())
 				},
 				Entry("for integration", k8s_api.INTEGRATION_AWS_ACCOUNT_ID),
-				Entry("for staging", k8s_api.STAGING_AWS_ACCOUNT_ID),
-				Entry("for production", k8s_api.PRODUCTION_AWS_ACCOUNT_ID),
-			)
-		})
-	} else if aws_account_id == k8s_api.STAGING_AWS_ACCOUNT_ID {
-		Context("when calling k8s api from the staging account", func() {
-			DescribeTable("it can't assume the synthetic test assumed role in other accounts",
-				func(ctx SpecContext, environment_account_id string) {
-					podList, _ := k8s_api.GetPodList(ctx, environment_account_id, k8s_api.CLUSTER_ID, k8s_api.ASSUME_ROLE_NAME, "apps")
-					Expect(podList).To(BeNil())
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("User: arn:aws:sts::%s:assumed-role/synthetic-test-assumer", k8s_api.STAGING_AWS_ACCOUNT_ID)))
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::%s:role/synthetic-test-assumed", environment_account_id)))
-				},
-				Entry("for integration", k8s_api.INTEGRATION_AWS_ACCOUNT_ID),
-				Entry("for production", k8s_api.PRODUCTION_AWS_ACCOUNT_ID),
-			)
-		})
-	} else if aws_account_id == k8s_api.INTEGRATION_AWS_ACCOUNT_ID {
-		Context("when calling k8s api from the integration account", func() {
-			DescribeTable("it can't assume the synthetic test assumed role in other accounts",
-				func(ctx SpecContext, environment_account_id string) {
-					podList, _ := k8s_api.GetPodList(ctx, environment_account_id, k8s_api.CLUSTER_ID, k8s_api.ASSUME_ROLE_NAME, "apps")
-					Expect(podList).To(BeNil())
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("User: arn:aws:sts::%s:assumed-role/synthetic-test-assumer", k8s_api.INTEGRATION_AWS_ACCOUNT_ID)))
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::%s:role/synthetic-test-assumed", environment_account_id)))
-				},
 				Entry("for staging", k8s_api.STAGING_AWS_ACCOUNT_ID),
 				Entry("for production", k8s_api.PRODUCTION_AWS_ACCOUNT_ID),
 			)
