@@ -14,6 +14,12 @@ spec:
       image: "ghcr.io/alphagov/govuk/govuk-synthetic-test-app:pipeline-test-1"
       # image: 'ghcr.io/alphagov/govuk/govuk-synthetic-test-app:ba09f95ec441c9038ad603cc5d49fa244b407e25'
       imagePullPolicy: Always
+      env:
+        - name: GITHUB_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: synthetic-test-github
       securityContext:
         allowPrivilegeEscalation: false
         capabilities:

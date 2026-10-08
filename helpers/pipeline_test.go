@@ -2,6 +2,7 @@ package helpers_test
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -58,15 +59,21 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 	)
 
 	var (
-		digest    string
-		token     string
-		latestTag string
-		err       error
+		digest            string
+		token             string
+		latestTag         string
+		headSha           string
+		githubAccessToken string
+		err               error
 	)
 
 	BeforeAll(func(ctx SpecContext) {
-		// TODO: create new release / or bump .version file by pushing to main
 		// TODO: weave context with cancel into all the functions
+		githubAccessToken = os.Getenv("GITHUB_ACCESS_TOKEN")
+
+		headSha, err = helpers.IncrementCanaryVersion(ctx, "https://github.com/alphagov/govuk-synthetic-test-app-canary", githubAccessToken)
+		Expect(err).NotTo(HaveOccurred())
+
 		token, err = helpers.GetGHCRToken(ctx, containerPath)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -83,6 +90,18 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 		func(ctx SpecContext, getEnvClient, getProdClient func() *helpers.K8sClient, env string) {
 			envClient := getEnvClient()
 			prodClient := getProdClient()
+
+			verifyGithubWorkflow := func(g Gomega) {
+				releaseResp, err := helpers.GetGithubWorkflowRunStatus(ctx, "release.yml", headSha, githubAccessToken)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(releaseResp.WorkflowRuns[0].Status).To(Equal("completed"), "Release workflow completed")
+				g.Expect(releaseResp.WorkflowRuns[0].Conclusion).To(Equal("success"), "Release workflow successful")
+
+				deployResp, err := helpers.GetGithubWorkflowRunStatus(ctx, "deploy.yml", headSha, githubAccessToken)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(deployResp.WorkflowRuns[0].Status).To(Equal("completed"), "Deploy workflow completed")
+				g.Expect(deployResp.WorkflowRuns[0].Conclusion).To(Equal("success"), "Deploy workflow successful")
+			}
 
 			verifyPostSyncWorkflow := func(g Gomega) {
 				postSyncLabel := buildPostSyncLabels(latestTag)
@@ -104,6 +123,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 				g.Expect(sourceImageTagVal).To(Equal(latestTag), "The value in github source for the %s environment matches the latest release tag %s", env, latestTag)
 			}
 
+			Eventually(ctx, verifyGithubWorkflow).Should(Succeed())
 			Eventually(ctx, verifyPostSyncWorkflow).Should(Succeed())
 			Eventually(ctx, verifyDeployImageWorkflow).Should(Succeed())
 
