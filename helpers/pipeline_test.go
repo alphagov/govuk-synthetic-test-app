@@ -1,8 +1,10 @@
 package helpers_test
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -26,9 +28,13 @@ func buildPostSyncLabels(tag string) string {
 }
 
 var _ = BeforeSuite(func(ctx SpecContext) {
-	By("bootstrapping k8s clients for different environments")
 	var err error
 
+	By("configuring git")
+	err = helpers.ConfigureGit(ctx)
+	Expect(err).NotTo(HaveOccurred())
+
+	By("bootstrapping k8s clients for different environments")
 	intClient, err = helpers.GetK8sClient(ctx, helpers.INTEGRATION_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(intClient).NotTo(BeNil())
@@ -59,23 +65,47 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 	)
 
 	var (
-		digest            string
-		token             string
-		latestTag         string
-		headSha           string
-		githubAccessToken string
-		err               error
+		digest    string
+		latestTag string
 	)
 
 	BeforeAll(func(ctx SpecContext) {
 		// TODO: weave context with cancel into all the functions
-		githubAccessToken = os.Getenv("GITHUB_ACCESS_TOKEN")
+		githubAccessToken := os.Getenv("GITHUB_ACCESS_TOKEN")
 
-		headSha, err = helpers.IncrementCanaryVersion(ctx, "https://github.com/alphagov/govuk-synthetic-test-app-canary", githubAccessToken)
+		headSha, err := helpers.IncrementCanaryVersion(ctx, "https://github.com/alphagov/govuk-synthetic-test-app-canary", githubAccessToken)
 		Expect(err).NotTo(HaveOccurred())
 
-		token, err = helpers.GetGHCRToken(ctx, containerPath)
+		trimmedHeadSha := strings.TrimSpace(headSha)
+
+		token, err := helpers.GetGHCRToken(ctx, containerPath)
 		Expect(err).NotTo(HaveOccurred())
+
+		verifyReleaseWorkflow := func(g Gomega, ctx context.Context, headSha, token string) {
+			releaseResp, err := helpers.GetGithubWorkflowRunStatus(ctx, "release.yml", headSha, token)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(releaseResp.WorkflowRuns[0].Status).To(Equal("completed"), "Release workflow completed")
+			g.Expect(releaseResp.WorkflowRuns[0].Conclusion).To(Equal("success"), "Release workflow successful")
+		}
+
+		verifyDeployWorkflow := func(g Gomega, ctx context.Context, headSha, token string) {
+			deployResp, err := helpers.GetGithubWorkflowRunStatus(ctx, "deploy.yml", headSha, token)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(deployResp.WorkflowRuns[0].Status).To(Equal("completed"), "Deploy workflow completed")
+			g.Expect(deployResp.WorkflowRuns[0].Conclusion).To(Equal("success"), "Deploy workflow successful")
+		}
+
+		Eventually(verifyReleaseWorkflow).
+			WithContext(ctx).
+			WithArguments(trimmedHeadSha, githubAccessToken).
+			WithTimeout(2 * time.Minute).
+			Should(Succeed())
+
+		Eventually(verifyDeployWorkflow).
+			WithContext(ctx).
+			WithArguments(trimmedHeadSha, githubAccessToken).
+			WithTimeout(4 * time.Minute).
+			Should(Succeed())
 
 		latestTag, err = helpers.GetLatestGitHubReleaseTag(ctx, repo)
 		Expect(err).NotTo(HaveOccurred())
@@ -91,19 +121,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 			envClient := getEnvClient()
 			prodClient := getProdClient()
 
-			verifyGithubWorkflow := func(g Gomega) {
-				releaseResp, err := helpers.GetGithubWorkflowRunStatus(ctx, "release.yml", headSha, githubAccessToken)
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(releaseResp.WorkflowRuns[0].Status).To(Equal("completed"), "Release workflow completed")
-				g.Expect(releaseResp.WorkflowRuns[0].Conclusion).To(Equal("success"), "Release workflow successful")
-
-				deployResp, err := helpers.GetGithubWorkflowRunStatus(ctx, "deploy.yml", headSha, githubAccessToken)
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(deployResp.WorkflowRuns[0].Status).To(Equal("completed"), "Deploy workflow completed")
-				g.Expect(deployResp.WorkflowRuns[0].Conclusion).To(Equal("success"), "Deploy workflow successful")
-			}
-
-			verifyPostSyncWorkflow := func(g Gomega) {
+			verifyPostSyncWorkflow := func(g Gomega, ctx context.Context, envClient *helpers.K8sClient, latestTag, appsNs string) {
 				postSyncLabel := buildPostSyncLabels(latestTag)
 
 				postSyncOk, err := helpers.GetArgoWorkflowStatus(ctx, envClient, appsNs, postSyncLabel)
@@ -111,7 +129,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 				g.Expect(postSyncOk).To(BeTrue(), "Argo Post Sync workflow Succeeded")
 			}
 
-			verifyDeployImageWorkflow := func(g Gomega) {
+			verifyDeployImageWorkflow := func(g Gomega, ctx context.Context, prodClient *helpers.K8sClient, latestTag, appNs string) {
 				deployLabel := buildDeployLabels(latestTag, env)
 
 				deployOk, err := helpers.GetArgoWorkflowStatus(ctx, prodClient, appsNs, deployLabel)
@@ -123,9 +141,19 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 				g.Expect(sourceImageTagVal).To(Equal(latestTag), "The value in github source for the %s environment matches the latest release tag %s", env, latestTag)
 			}
 
-			Eventually(ctx, verifyGithubWorkflow).Should(Succeed())
-			Eventually(ctx, verifyPostSyncWorkflow).Should(Succeed())
-			Eventually(ctx, verifyDeployImageWorkflow).Should(Succeed())
+			Eventually(verifyPostSyncWorkflow).
+				WithContext(ctx).
+				WithArguments(envClient, latestTag, appsNs).
+				WithTimeout(20 * time.Minute).
+				WithPolling(1 * time.Minute).
+				Should(Succeed())
+
+			Eventually(verifyDeployImageWorkflow).
+				WithContext(ctx).
+				WithArguments(prodClient, latestTag, appsNs).
+				WithTimeout(20 * time.Minute).
+				WithPolling(1 * time.Minute).
+				Should(Succeed())
 
 			isSyncedAndHealthy, err := helpers.GetArgoCDApplicationStatus(ctx, envClient, applicationCrdNs, appName)
 			Expect(err).NotTo(HaveOccurred())

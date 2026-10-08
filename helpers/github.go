@@ -106,12 +106,12 @@ func GetLatestGitHubTagSHA(ctx context.Context, repo string) (string, error) {
 	return tags[0].Commit.SHA, nil
 }
 
-func GetGithubWorkflowRunStatus(ctx context.Context, workflow, headSha, githubToken string) (GitHubWorkflowRunsResponse, error) {
+func GetGithubWorkflowRunStatus(ctx context.Context, workflow, headSha, githubToken string) (*GitHubWorkflowRunsResponse, error) {
 	var runsResp GitHubWorkflowRunsResponse
-	url := fmt.Sprintf("https://api.github.com/repos/govuk-synthetic-test-app-canary/actions/workflows/%s/runs?head_sha=%s", workflow, headSha)
+	url := fmt.Sprintf("https://api.github.com/repos/alphagov/govuk-synthetic-test-app-canary/actions/workflows/%s/runs?head_sha=%s", workflow, headSha)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return runsResp, err
+		return nil, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("Authorization", "Bearer "+githubToken)
@@ -119,24 +119,24 @@ func GetGithubWorkflowRunStatus(ctx context.Context, workflow, headSha, githubTo
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return runsResp, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return runsResp, fmt.Errorf("failed to get workflow runs: %s %s", resp.Status, string(body))
+		return nil, fmt.Errorf("failed to get workflow runs: %s %s", resp.Status, string(body))
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&runsResp); err != nil {
-		return runsResp, err
+		return nil, err
 	}
 
 	if len(runsResp.WorkflowRuns) == 0 {
-		return runsResp, fmt.Errorf("no workflow runs found for head_sha %s", headSha)
+		return nil, fmt.Errorf("no workflow runs found for head_sha %s", headSha)
 	}
 
-	return runsResp, nil
+	return &runsResp, nil
 }
 
 // GetGHCRToken fetches an anonymous authentication token for GHCR using the repository scope.

@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 type ArgoWorkflowStatus struct {
@@ -71,6 +73,10 @@ func GetArgoWorkflowStatus(ctx context.Context, k8sClient *K8sClient, namespace,
 	var workflow ArgoWorkflowStatus
 	if err := json.Unmarshal(body, &workflow); err != nil {
 		return false, err
+	}
+
+	if len(workflow.Items) == 0 {
+		return false, fmt.Errorf("There are no workflow items")
 	}
 
 	return workflow.Items[0].Status.Phase == "Succeeded", nil

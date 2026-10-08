@@ -9,6 +9,8 @@ RUN addgroup -g 1000 $USER \
     && adduser -u 1000 -G $USER -D $USER \
     && chown -R $USER:$USER $HOME
 
+RUN apk add git
+
 USER $USER
 WORKDIR $HOME
 

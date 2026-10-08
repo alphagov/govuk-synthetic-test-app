@@ -18,8 +18,8 @@ spec:
         - name: GITHUB_ACCESS_TOKEN
           valueFrom:
             secretKeyRef:
-              key: token
-              name: synthetic-test-github
+              key: govuk_synthetic-test-app_github
+              name: synthetic-test-app-github
       securityContext:
         allowPrivilegeEscalation: false
         capabilities:

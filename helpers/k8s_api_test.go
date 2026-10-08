@@ -64,21 +64,24 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 		)
 	})
 
-	ctx := context.TODO()
-	aws_account_id, err := k8s_api.GetAwsAccountID(ctx)
-	Expect(err).NotTo(HaveOccurred())
-
-	if aws_account_id == k8s_api.PRODUCTION_AWS_ACCOUNT_ID {
-		Context("when calling k8s api from the production account", func() {
-			DescribeTable("it can assume the synthetic test assumed role in other accounts",
-				func(ctx SpecContext, environment_account_id string) {
-					podList, _ := k8s_api.GetPodList(ctx, environment_account_id, k8s_api.CLUSTER_ID, k8s_api.ASSUME_ROLE_NAME, "apps")
-					Expect(podList.Items[0].Spec.Containers[0].Image).NotTo(BeNil())
-				},
-				Entry("for integration", k8s_api.INTEGRATION_AWS_ACCOUNT_ID),
-				Entry("for staging", k8s_api.STAGING_AWS_ACCOUNT_ID),
-				Entry("for production", k8s_api.PRODUCTION_AWS_ACCOUNT_ID),
-			)
+	Context("when calling k8s api from the production account", func() {
+		BeforeEach(func() {
+			ctx := context.TODO()
+			aws_account_id, err := k8s_api.GetAwsAccountID(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			if aws_account_id != k8s_api.PRODUCTION_AWS_ACCOUNT_ID {
+				Skip("Not in production account")
+			}
 		})
-	}
+
+		DescribeTable("it can assume the synthetic test assumed role in other accounts",
+			func(ctx SpecContext, environment_account_id string) {
+				podList, _ := k8s_api.GetPodList(ctx, environment_account_id, k8s_api.CLUSTER_ID, k8s_api.ASSUME_ROLE_NAME, "apps")
+				Expect(podList.Items[0].Spec.Containers[0].Image).NotTo(BeNil())
+			},
+			Entry("for integration", k8s_api.INTEGRATION_AWS_ACCOUNT_ID),
+			Entry("for staging", k8s_api.STAGING_AWS_ACCOUNT_ID),
+			Entry("for production", k8s_api.PRODUCTION_AWS_ACCOUNT_ID),
+		)
+	})
 })

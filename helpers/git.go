@@ -8,6 +8,21 @@ import (
 	"strings"
 )
 
+func ConfigureGit(ctx context.Context) error {
+	emailCmd := exec.CommandContext(ctx, "git", "config", "--global", "user.email", "jaskaransarkaria@digital.cabinet-office.gov.uk")
+	emailOutput, err := emailCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to set git email: %w, output: %s", err, string(emailOutput))
+	}
+
+	nameCmd := exec.CommandContext(ctx, "git", "config", "--global", "user.name", "jaskaransarkaria")
+	nameOutput, err := nameCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to git name: %w, output: %s", err, string(nameOutput))
+	}
+	return nil
+}
+
 func clone(ctx context.Context, repoUrl, githubToken, tempDir string) error {
 	u, err := url.Parse(repoUrl)
 	if err == nil && u.Host != "" && (strings.HasSuffix(u.Host, ".github.com") || u.Host == "github.com") {
@@ -24,22 +39,32 @@ func clone(ctx context.Context, repoUrl, githubToken, tempDir string) error {
 	return nil
 }
 
-func commitAndPush(ctx context.Context, repoDir string) error {
-	cmd := exec.CommandContext(ctx, "git", "-C", repoDir, "add", ".version")
+func commitAndPush(ctx context.Context, repoDir, sourceBranch string) error {
+	targetBranch := "main"
+
+	cmd := exec.CommandContext(ctx, "git", "-C", repoDir, "checkout", "-b", sourceBranch)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to git checkout: %w, output: %s", err, string(output))
+	}
+
+	cmd = exec.CommandContext(ctx, "git", "-C", repoDir, "add", ".version")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to git add: %w, output: %s", err, string(output))
 	}
 
-	cmd = exec.CommandContext(ctx, "git", "-C", repoDir, "commit", "-m", "Bump version")
+	cmd = exec.CommandContext(ctx, "git", "-C", repoDir, "commit", "-m", "Bump version: "+sourceBranch)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to git commit: %w, output: %s", err, string(output))
 	}
 
-	cmd = exec.CommandContext(ctx, "git", "-C", repoDir, "push")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to git push: %w, output: %s", err, string(output))
+	if err := mergeBranch(ctx, repoDir, sourceBranch, targetBranch); err != nil {
+		return fmt.Errorf("failed to merge git commit: %s", err)
 	}
 
+	cmd = exec.CommandContext(ctx, "git", "-C", repoDir, "push", "origin", targetBranch)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to push %s: %w, output: %s", targetBranch, err, string(output))
+	}
 	return nil
 }
 
@@ -50,5 +75,24 @@ func getHeadSha(ctx context.Context, repoDir string) (string, error) {
 		return "", fmt.Errorf("failed to get commit SHA: %w, output: %s", err, string(output))
 	}
 
-	return strings.TrimSpace(string(output)), nil
+	return string(output), nil
+}
+
+// MergeBranch merges sourceBranch into targetBranch using --no-ff to ensure a merge commit is created,
+// then pushes the targetBranch to origin.
+func mergeBranch(ctx context.Context, repoDir, sourceBranch, targetBranch string) error {
+	cmd := exec.CommandContext(ctx, "git", "-C", repoDir, "checkout", targetBranch)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to checkout %s: %w, output: %s", targetBranch, err, string(output))
+	}
+
+	// Merge source branch into target branch using --no-ff
+	// This forces the creation of a merge commit even if the merge could be fast-forwarded.
+	mergeMsg := fmt.Sprintf("Merge branch '%s' into %s", sourceBranch, targetBranch)
+	cmd = exec.CommandContext(ctx, "git", "-C", repoDir, "merge", "--no-ff", sourceBranch, "-m", mergeMsg)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to merge %s into %s: %w, output: %s", sourceBranch, targetBranch, err, string(output))
+	}
+
+	return nil
 }
