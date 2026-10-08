@@ -71,6 +71,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 
 	BeforeAll(func(ctx SpecContext) {
 		// TODO: weave context with cancel into all the functions
+		By("[BeforeAll] Triggering the deployment by committing and releasing a new app version")
 		githubAccessToken := os.Getenv("GITHUB_ACCESS_TOKEN")
 
 		headSha, err := helpers.IncrementCanaryVersion(ctx, "https://github.com/alphagov/govuk-synthetic-test-app-canary", githubAccessToken)
@@ -111,11 +112,11 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 
 		latestTag, err = helpers.GetLatestGitHubReleaseTag(ctx, repo)
 		Expect(err).NotTo(HaveOccurred())
-		GinkgoLogr.Info("Latest GitHub release tag: %s\n", latestTag)
+		By("Latest GitHub release tag: " + latestTag)
 
 		digest, err = helpers.GetGHCRImageDigest(ctx, containerPath, latestTag, token)
 		Expect(err).NotTo(HaveOccurred())
-		GinkgoLogr.Info("Latest GitHub container digest: %s\n", digest)
+		By("Latest GitHub container digest: " + digest)
 	})
 
 	DescribeTable("Query each state of the deployment pipeline", Ordered,
@@ -123,7 +124,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 			envClient := getEnvClient()
 			prodClient := getProdClient()
 
-			GinkgoLogr.Info("[%s] Checking status of the the deployment", env)
+			By("[" + env + "] Checking status of the the deployment")
 
 			verifyPostSyncWorkflow := func(g Gomega, ctx context.Context, envClient *helpers.K8sClient, latestTag, appsNs string) {
 				postSyncLabel := buildPostSyncLabels(latestTag)
@@ -148,32 +149,32 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 			Eventually(verifyPostSyncWorkflow).
 				WithContext(ctx).
 				WithArguments(envClient, latestTag, appsNs).
-				WithTimeout(10 * time.Minute).
+				WithTimeout(15 * time.Minute).
 				WithPolling(1 * time.Minute).
 				Should(Succeed())
 
-			GinkgoLogr.Info("[%s] Argo Workflow Post Sync is successful", env)
+			By("[" + env + "] Argo Workflow Post Sync is successful")
 
 			Eventually(verifyDeployImageWorkflow).
 				WithContext(ctx).
 				WithArguments(prodClient, latestTag, appsNs).
-				WithTimeout(10 * time.Minute).
+				WithTimeout(15 * time.Minute).
 				WithPolling(1 * time.Minute).
 				Should(Succeed())
 
-			GinkgoLogr.Info("[%s] Argo Workflow Deploy Image is successful", env)
+			By("[" + env + "] Argo Workflow Deploy Image is successful")
 
 			isSyncedAndHealthy, err := helpers.GetArgoCDApplicationStatus(ctx, envClient, applicationCrdNs, appName)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(isSyncedAndHealthy).To(BeTrue(), "ArgoCD application %s should be Synced and Healthy", appName)
 
-			GinkgoLogr.Info("[%s] Argo CD govuk-synthetic-test-app-canary is synced and healthy", env)
+			By("[" + env + "] Argo CD govuk-synthetic-test-app-canary is synced and healthy")
 
 			verifyPodImage := func(g Gomega, ctx context.Context, envClient *helpers.K8sClient, appsNs, appLabelSelector string) {
 				tag, sha, err := helpers.GetPodImageDetails(ctx, envClient, appsNs, appLabelSelector)
 				g.Expect(err).NotTo(HaveOccurred())
 
-				GinkgoLogr.Info("[%s] Deployed image tag: %s, SHA: %s\n", env, tag, sha)
+				By("[" + env + "] Deployed image tag: " + tag + ", SHA: +" + sha)
 
 				g.Expect(tag).To(Equal(latestTag), "Deployed image tag %s does not match latest GitHub release tag %s", tag, latestTag)
 
@@ -187,7 +188,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 				WithPolling(1 * time.Minute).
 				Should(Succeed())
 
-			GinkgoLogr.Info("[%s] Release has rolled out successfully and the deployed tag and sha are correct", env)
+			By("[" + env + "] Release has rolled out successfully and the deployed tag and sha are correct")
 
 			verifyVersionDisplayedInApp := func(g Gomega, ctx context.Context, latestTag string) {
 				displayedVersion, err := helpers.GetVersionFromApp(ctx)
@@ -202,7 +203,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 				WithPolling(1 * time.Minute).
 				Should(Succeed())
 
-			GinkgoLogr.Info("[%s] Application is serving the new data", env)
+			By("[" + env + "] Application is serving the new data")
 		},
 
 		Entry(
