@@ -8,8 +8,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.14
 	github.com/aws/aws-sdk-go-v2/service/eks v1.74.2
 	github.com/aws/aws-sdk-go-v2/service/sts v1.38.6
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/onsi/ginkgo/v2 v2.25.3
-	github.com/onsi/gomega v1.38.2
+	github.com/onsi/gomega v1.44.0
+	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.34.1
 	k8s.io/apimachinery v0.34.1
 	sigs.k8s.io/aws-iam-authenticator v0.7.7
@@ -48,11 +50,11 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
-	golang.org/x/tools v0.44.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/tools v0.45.0 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

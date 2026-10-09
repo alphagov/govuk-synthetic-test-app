@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -27,12 +28,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-const CERT_PATH string = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-const INTEGRATION_AWS_ACCOUNT_ID string = "210287912431"
-const STAGING_AWS_ACCOUNT_ID string = "696911096973"
-const PRODUCTION_AWS_ACCOUNT_ID string = "172025368201"
-const CLUSTER_ID string = "govuk"
-const REGION string = "eu-west-1"
+const (
+	CERT_PATH                  string = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	INTEGRATION_AWS_ACCOUNT_ID string = "210287912431"
+	STAGING_AWS_ACCOUNT_ID     string = "696911096973"
+	PRODUCTION_AWS_ACCOUNT_ID  string = "172025368201"
+	CLUSTER_ID                 string = "govuk"
+	REGION                     string = "eu-west-1"
+	ASSUME_ROLE_NAME           string = "synthetic-test-assumer"
+)
 
 func CheckRunningInK8s() (bool, error) {
 	if _, err := os.Stat(CERT_PATH); err != nil {
@@ -52,13 +56,16 @@ type K8sClient struct {
 	ClusterEndpoint string
 }
 
-func (k *K8sClient) Get(url string) (*http.Response, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/namespaces/%s", k.ClusterEndpoint, url), nil)
+func (k *K8sClient) Get(ctx context.Context, url string) (*http.Response, error) {
+	fullURL := strings.TrimPrefix(url, "/")
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", k.ClusterEndpoint, fullURL), nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+k.Token)
-	req.Header.Set("Accept", "application/yaml")
+	req.Header.Set("Accept", "application/json")
+
+	req = req.WithContext(ctx)
 
 	return k.Client.Do(req)
 }
@@ -78,13 +85,15 @@ func GetAwsAccountID(ctx context.Context) (string, error) {
 	return *callerIdentity.Account, nil
 }
 
-func GetK8sClient(ctx context.Context, environment_account_id string) (*K8sClient, error) {
-	running_in_k8s, err := CheckRunningInK8s()
+func GetK8sClient(ctx context.Context, accountID string, clusterID string, roleName string) (*K8sClient, error) {
+	runningInK8s, err := CheckRunningInK8s()
 	if err != nil {
 		return nil, err
-	} else if !running_in_k8s {
+	} else if !runningInK8s {
 		return nil, nil
 	}
+
+	assumeRoleARN := fmt.Sprintf("arn:aws:iam::%s:role/synthetic-test-assumed", accountID)
 
 	g, err := token.NewGenerator(false, false)
 	if err != nil {
@@ -93,8 +102,8 @@ func GetK8sClient(ctx context.Context, environment_account_id string) (*K8sClien
 
 	tk, err := g.GetWithOptions(ctx, &token.GetTokenOptions{
 		Region:        REGION,
-		ClusterID:     CLUSTER_ID,
-		AssumeRoleARN: fmt.Sprintf("arn:aws:iam::%s:role/synthetic-test-assumed", environment_account_id),
+		ClusterID:     clusterID,
+		AssumeRoleARN: assumeRoleARN,
 		SessionName:   "GovUKSyntheticTestApp",
 	})
 	if err != nil {
@@ -105,13 +114,14 @@ func GetK8sClient(ctx context.Context, environment_account_id string) (*K8sClien
 	if err != nil {
 		return nil, err
 	}
+
 	sourceAccount := sts.NewFromConfig(cfg)
 
 	rand.Seed(time.Now().UnixNano())
 	response, err := sourceAccount.AssumeRole(
 		ctx,
 		&sts.AssumeRoleInput{
-			RoleArn:         aws.String(fmt.Sprintf("arn:aws:iam::%s:role/synthetic-test-assumed", environment_account_id)),
+			RoleArn:         aws.String(assumeRoleARN),
 			RoleSessionName: aws.String("GOVUK-Synthetic-Test-Assumed-" + strconv.Itoa(10000+rand.Intn(25000))),
 		})
 	if err != nil {
@@ -133,7 +143,7 @@ func GetK8sClient(ctx context.Context, environment_account_id string) (*K8sClien
 
 	eks_client := eks.NewFromConfig(cfg)
 
-	cluster, err := eks_client.DescribeCluster(ctx, &eks.DescribeClusterInput{Name: aws.String(CLUSTER_ID)})
+	cluster, err := eks_client.DescribeCluster(ctx, &eks.DescribeClusterInput{Name: aws.String(clusterID)})
 	if err != nil {
 		return nil, err
 	}
@@ -160,17 +170,17 @@ func GetK8sClient(ctx context.Context, environment_account_id string) (*K8sClien
 	}, nil
 }
 
-func GetK8sAPIData(ctx context.Context, environment_account_id string, namespace string, resource_type string) ([]byte, error) {
-	client, err := GetK8sClient(ctx, environment_account_id)
+func GetK8sAPIData(ctx context.Context, accountID string, clusterID string, roleName string, namespace string, resource_type string) ([]byte, error) {
+	client, err := GetK8sClient(ctx, accountID, clusterID, roleName)
 	if err != nil {
 		return nil, err
 	}
-	url, err := url.JoinPath(namespace, resource_type)
+	url, err := url.JoinPath("api", "v1", "namespaces", namespace, resource_type)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := client.Get(url)
+	resp, err := client.Get(ctx, url)
 	if err != nil {
 		err = fmt.Errorf("Error: %v, retrieving %v", err, url)
 		return nil, err
@@ -190,19 +200,19 @@ func GetK8sAPIData(ctx context.Context, environment_account_id string, namespace
 	return bodyText, nil
 }
 
-func GetPodList(ctx context.Context, environment_account_id string, namespace string) (*corev1.PodList, error) {
-	bodyText_all, err := GetK8sAPIData(ctx, environment_account_id, namespace, "pods")
+func GetPodList(ctx context.Context, accountID string, clusterID string, roleName string, namespace string) (*corev1.PodList, error) {
+	bodyText_all, err := GetK8sAPIData(ctx, accountID, clusterID, roleName, namespace, "pods")
 	if err != nil {
 		return nil, err
 	}
 
-	// https://godoc.org/k8s.io/apimachinery/pkg/runtime#Scheme
 	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
 
-	// https://godoc.org/k8s.io/apimachinery/pkg/runtime/serializer#CodecFactory
 	codecFactory := serializer.NewCodecFactory(scheme)
 
-	// https://godoc.org/k8s.io/apimachinery/pkg/runtime#Decoder
 	deserializer := codecFactory.UniversalDeserializer()
 
 	podObject, _, err := deserializer.Decode(bodyText_all, nil, &corev1.PodList{})
