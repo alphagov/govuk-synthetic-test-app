@@ -13,10 +13,10 @@ func ConfigureGit(ctx context.Context) error {
 	botName := "gov-uk-synthetic-test-app-canary[bot]"
 	botEmail := fmt.Sprintf("%d+%s@users.noreply.github.com", botId, botName)
 
-	if err := exec.CommandContext(ctx, "git", "--global", "config", "user.name", botName).Run(); err != nil {
+	if err := exec.CommandContext(ctx, "git", "config", "--global", "user.name", botName).Run(); err != nil {
 		return fmt.Errorf("failed to set git user.name: %w", err)
 	}
-	if err := exec.CommandContext(ctx, "git", "--global", "config", "user.email", botEmail).Run(); err != nil {
+	if err := exec.CommandContext(ctx, "git", "config", "--global", "user.email", botEmail).Run(); err != nil {
 		return fmt.Errorf("failed to set git user.email: %w", err)
 	}
 	return nil
