@@ -112,6 +112,7 @@ func GetK8sClient(ctx context.Context, accountID string, clusterID string, roleN
 	if err != nil {
 		return nil, err
 	}
+
 	sourceAccount := sts.NewFromConfig(cfg)
 
 	rand.Seed(time.Now().UnixNano())

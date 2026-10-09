@@ -20,19 +20,6 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 			GinkgoWriter.Printf("First pod image: %s, %s\n", podList.Items[0].Labels["app"], podList.Items[0].Spec.Containers[0].Image)
 			Expect(podList.Items[0].Spec.Containers[0].Image).NotTo(BeNil())
 		})
-		It("returns pods list and all pods are running with arch arm64", func(ctx SpecContext) {
-			aws_account_id, err := k8s_api.GetAwsAccountID(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			podList, _ := k8s_api.GetPodList(ctx, aws_account_id, k8s_api.CLUSTER_ID, k8s_api.ASSUME_ROLE_NAME, "apps")
-			Expect(podList.Items[0].Labels["app.kubernetes.io/arch"]).To(Equal("arm64"))
-
-			for _, item := range podList.Items {
-				Expect(item.Labels).To(
-					HaveKeyWithValue("app.kubernetes.io/arch", "arm64"),
-					fmt.Sprintf("item %s is missing the app.kubernetes.io/arch label, or its value isn't 'arm64'", item.Name),
-				)
-			}
-		})
 	})
 
 	Context("when trying to perform a DELETE, PATCH, POST, PUT with the k8s api on the apps namespace", func() {

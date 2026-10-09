@@ -13,12 +13,6 @@ import (
 	"github.com/alphagov/govuk-synthetic-test-app/helpers"
 )
 
-var (
-	intClient     *helpers.K8sClient
-	stagingClient *helpers.K8sClient
-	prodClient    *helpers.K8sClient
-)
-
 func buildDeployLabels(tag, env string) string {
 	return fmt.Sprintf("repoName=govuk-synthetic-test-app-canary,imageTag=%s,workflows.argoproj.io/workflow-template=deploy-image,environment=%s", tag, env)
 }
@@ -28,24 +22,9 @@ func buildPostSyncLabels(tag string) string {
 }
 
 var _ = BeforeSuite(func(ctx SpecContext) {
-	var err error
-
-	By("configuring git")
-	err = helpers.ConfigureGit(ctx)
+	By("Configuring git")
+	err := helpers.ConfigureGit(ctx)
 	Expect(err).NotTo(HaveOccurred())
-
-	By("bootstrapping k8s clients for different environments")
-	intClient, err = helpers.GetK8sClient(ctx, helpers.INTEGRATION_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(intClient).NotTo(BeNil())
-
-	stagingClient, err = helpers.GetK8sClient(ctx, helpers.STAGING_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(stagingClient).NotTo(BeNil())
-
-	prodClient, err = helpers.GetK8sClient(ctx, helpers.PRODUCTION_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(prodClient).NotTo(BeNil())
 })
 
 var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary application SHOULD be synced, healthy, and running the latest version from GitHub tag / container sha", Ordered, func() {
@@ -96,6 +75,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 			g.Expect(deployResp.WorkflowRuns[0].Conclusion).To(Equal("success"), "Deploy workflow successful")
 		}
 
+		By("[BeforeAll] Querying status of Canary App Release GitHub Action")
 		Eventually(verifyReleaseWorkflow).
 			WithContext(ctx).
 			WithArguments(trimmedHeadSha, githubAccessToken).
@@ -103,6 +83,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 			WithPolling(30 * time.Second).
 			Should(Succeed())
 
+		By("[BeforeAll] Querying status of Canary App Deploy GitHub Action")
 		Eventually(verifyDeployWorkflow).
 			WithContext(ctx).
 			WithArguments(trimmedHeadSha, githubAccessToken).
@@ -112,19 +93,36 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 
 		latestTag, err = helpers.GetLatestGitHubReleaseTag(ctx, repo)
 		Expect(err).NotTo(HaveOccurred())
-		By("Latest GitHub release tag: " + latestTag)
+		By("[BeforeAll] Latest GitHub release tag: " + latestTag)
 
 		digest, err = helpers.GetGHCRImageDigest(ctx, containerPath, latestTag, token)
 		Expect(err).NotTo(HaveOccurred())
-		By("Latest GitHub container digest: " + digest)
+		By("[BeforeAll] Latest GitHub container digest: " + digest)
 	})
 
 	DescribeTable("Query each state of the deployment pipeline", Ordered,
-		func(ctx SpecContext, getEnvClient, getProdClient func() *helpers.K8sClient, env string) {
-			envClient := getEnvClient()
-			prodClient := getProdClient()
+		func(ctx SpecContext, env string) {
+			By("[" + env + "] Bootstrapping k8s clients for different environments")
+			var envClient *helpers.K8sClient
 
-			By("[" + env + "] Checking status of the the deployment")
+			prodClient, err := helpers.GetK8sClient(ctx, helpers.PRODUCTION_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(prodClient).NotTo(BeNil())
+
+			switch env {
+			case integration:
+				envClient, err = helpers.GetK8sClient(ctx, helpers.INTEGRATION_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(envClient).NotTo(BeNil())
+			case staging:
+				envClient, err = helpers.GetK8sClient(ctx, helpers.STAGING_AWS_ACCOUNT_ID, helpers.CLUSTER_ID, helpers.ASSUME_ROLE_NAME)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(envClient).NotTo(BeNil())
+			case production:
+				envClient = prodClient
+			}
+
+			By("[" + env + "] Checking the status of the deployment")
 
 			verifyPostSyncWorkflow := func(g Gomega, ctx context.Context, envClient *helpers.K8sClient, latestTag, appsNs string) {
 				postSyncLabel := buildPostSyncLabels(latestTag)
@@ -188,7 +186,9 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 				WithPolling(1 * time.Minute).
 				Should(Succeed())
 
-			By("[" + env + "] Release has rolled out successfully and the deployed tag and sha are correct")
+			// TODO: here I need to trigger the sync in argo
+
+			By("[" + env + "] Canary App release has rolled out successfully and the deployed tag and sha are correct")
 
 			verifyVersionDisplayedInApp := func(g Gomega, ctx context.Context, latestTag string) {
 				displayedVersion, err := helpers.GetVersionFromApp(ctx)
@@ -199,7 +199,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 			Eventually(verifyVersionDisplayedInApp).
 				WithContext(ctx).
 				WithArguments(latestTag).
-				WithTimeout(20 * time.Minute).
+				WithTimeout(5 * time.Minute).
 				WithPolling(1 * time.Minute).
 				Should(Succeed())
 
@@ -208,22 +208,16 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 
 		Entry(
 			"WHEN the environment is INTEGRATION",
-			func() *helpers.K8sClient { return intClient },
-			func() *helpers.K8sClient { return prodClient },
 			integration,
 		),
 
 		Entry(
 			"WHEN the environment is STAGING",
-			func() *helpers.K8sClient { return stagingClient },
-			func() *helpers.K8sClient { return prodClient },
 			staging,
 		),
 
 		Entry(
 			"WHEN the environment is PRODUCTION",
-			func() *helpers.K8sClient { return prodClient },
-			func() *helpers.K8sClient { return prodClient },
 			production,
 		),
 	)
