@@ -129,7 +129,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 
 				postSyncOk, err := helpers.GetArgoWorkflowStatus(ctx, envClient, appsNs, postSyncLabel)
 				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(postSyncOk).To(BeTrue(), "Argo Post Sync workflow Succeeded")
+				g.Expect(postSyncOk).To(BeTrue(), "Argo Post Sync workflow Failed")
 			}
 
 			verifyDeployImageWorkflow := func(g Gomega, ctx context.Context, prodClient *helpers.K8sClient, latestTag, appNs string) {
@@ -137,11 +137,11 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 
 				deployOk, err := helpers.GetArgoWorkflowStatus(ctx, prodClient, appsNs, deployLabel)
 				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(deployOk).To(BeTrue(), "Argo Deploy Image workflow Succeeded")
+				g.Expect(deployOk).To(BeTrue(), "Argo Deploy Image workflow Failed")
 
 				sourceImageTagVal, err := helpers.GetImageTagFromChartRepo(env)
 				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(sourceImageTagVal).To(Equal(latestTag), "The value in github source for the %s environment matches the latest release tag %s", env, latestTag)
+				g.Expect(sourceImageTagVal).To(Equal(latestTag), "The value in github source code for the %s environment _does not match_ the latest release tag %s", env, latestTag)
 			}
 
 			Eventually(verifyPostSyncWorkflow).
@@ -164,7 +164,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 
 			isSyncedAndHealthy, err := helpers.GetArgoCDApplicationStatus(ctx, envClient, applicationCrdNs, appName)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(isSyncedAndHealthy).To(BeTrue(), "ArgoCD application %s should be Synced and Healthy", appName)
+			Expect(isSyncedAndHealthy).To(BeTrue(), "ArgoCD application %s is not Synced and Healthy", appName)
 
 			By("[" + env + "] Argo CD govuk-synthetic-test-app-canary is synced and healthy")
 
@@ -174,19 +174,17 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 
 				By("[" + env + "] Deployed image tag: " + tag + ", SHA: +" + sha)
 
-				g.Expect(tag).To(Equal(latestTag), "Deployed image tag %s does not match latest GitHub release tag %s", tag, latestTag)
+				g.Expect(tag).To(Equal(latestTag), "Deployed image tag %s _does not match_ latest GitHub release tag %s", tag, latestTag)
 
-				g.Expect(sha).To(Equal(digest), "Deplod sha does not match the latest digest pulled from ghcr", sha, digest)
+				g.Expect(sha).To(Equal(digest), "Deplod sha _does not match_ the latest digest pulled from ghcr", sha, digest)
 			}
 
 			Eventually(verifyPodImage).
 				WithContext(ctx).
 				WithArguments(envClient, appsNs, appLabelSelector).
-				WithTimeout(20 * time.Minute).
+				WithTimeout(10 * time.Minute).
 				WithPolling(1 * time.Minute).
 				Should(Succeed())
-
-			// TODO: here I need to trigger the sync in argo
 
 			By("[" + env + "] Canary App release has rolled out successfully and the deployed tag and sha are correct")
 
@@ -199,7 +197,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 			Eventually(verifyVersionDisplayedInApp).
 				WithContext(ctx).
 				WithArguments(latestTag).
-				WithTimeout(5 * time.Minute).
+				WithTimeout(10 * time.Minute).
 				WithPolling(1 * time.Minute).
 				Should(Succeed())
 
