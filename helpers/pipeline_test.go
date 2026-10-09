@@ -51,7 +51,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 	BeforeAll(func(ctx SpecContext) {
 		// TODO: weave context with cancel into all the functions
 		By("[BeforeAll] Triggering the deployment by committing and releasing a new app version")
-		githubAccessToken := os.Getenv("GITHUB_ACCESS_TOKEN")
+		githubAccessToken, err := helpers.GetGitHubAppToken(ctx, os.Getenv("GITHUB_APP_ID"), os.Getenv("GITHUB_INSTALL_ID"), os.Getenv("GITHUB_PEM_STR"))
 
 		headSha, err := helpers.IncrementCanaryVersion(ctx, "https://github.com/alphagov/govuk-synthetic-test-app-canary", githubAccessToken)
 		Expect(err).NotTo(HaveOccurred())

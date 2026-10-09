@@ -9,16 +9,15 @@ import (
 )
 
 func ConfigureGit(ctx context.Context) error {
-	emailCmd := exec.CommandContext(ctx, "git", "config", "--global", "user.email", "jaskaransarkaria@digital.cabinet-office.gov.uk")
-	emailOutput, err := emailCmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to set git email: %w, output: %s", err, string(emailOutput))
-	}
+	botId := 340069771
+	botName := "gov-uk-synthetic-test-app-canary[bot]"
+	botEmail := fmt.Sprintf("%d+%s@users.noreply.github.com", botId, botName)
 
-	nameCmd := exec.CommandContext(ctx, "git", "config", "--global", "user.name", "jaskaransarkaria")
-	nameOutput, err := nameCmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to git name: %w, output: %s", err, string(nameOutput))
+	if err := exec.CommandContext(ctx, "git", "--global", "config", "user.name", botName).Run(); err != nil {
+		return fmt.Errorf("failed to set git user.name: %w", err)
+	}
+	if err := exec.CommandContext(ctx, "git", "--global", "config", "user.email", botEmail).Run(); err != nil {
+		return fmt.Errorf("failed to set git user.email: %w", err)
 	}
 	return nil
 }
@@ -39,8 +38,14 @@ func clone(ctx context.Context, repoUrl, githubToken, tempDir string) error {
 	return nil
 }
 
-func commitAndPush(ctx context.Context, repoDir, sourceBranch string) error {
+func commitAndPush(ctx context.Context, repoDir, repoUrl, githubToken, sourceBranch string) error {
 	targetBranch := "main"
+
+	u, err := url.Parse(repoUrl)
+	if err == nil && u.Host != "" && (strings.HasSuffix(u.Host, ".github.com") || u.Host == "github.com") {
+		u.User = url.UserPassword("x-access-token", githubToken)
+		repoUrl = u.String()
+	}
 
 	cmd := exec.CommandContext(ctx, "git", "-C", repoDir, "checkout", "-b", sourceBranch)
 	if output, err := cmd.CombinedOutput(); err != nil {
@@ -61,7 +66,7 @@ func commitAndPush(ctx context.Context, repoDir, sourceBranch string) error {
 		return fmt.Errorf("failed to merge git commit: %s", err)
 	}
 
-	cmd = exec.CommandContext(ctx, "git", "-C", repoDir, "push", "origin", targetBranch)
+	cmd = exec.CommandContext(ctx, "git", "-C", repoDir, "push", repoUrl)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to push %s: %w, output: %s", targetBranch, err, string(output))
 	}

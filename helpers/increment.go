@@ -43,7 +43,7 @@ func IncrementCanaryVersion(ctx context.Context, repoUrl, githubToken string) (s
 		return "", fmt.Errorf("failed to write new version: %w", err)
 	}
 
-	if err := commitAndPush(ctx, tempDir, newVersion); err != nil {
+	if err := commitAndPush(ctx, tempDir, repoUrl, githubToken, newVersion); err != nil {
 		return "", fmt.Errorf("failed to commit and push: %w", err)
 	}
 

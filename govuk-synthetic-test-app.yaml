@@ -15,10 +15,20 @@ spec:
       # image: 'ghcr.io/alphagov/govuk/govuk-synthetic-test-app:ba09f95ec441c9038ad603cc5d49fa244b407e25'
       imagePullPolicy: Always
       env:
-        - name: GITHUB_ACCESS_TOKEN
+        - name: GITHUB_PEM_STR
           valueFrom:
             secretKeyRef:
-              key: govuk_synthetic-test-app_github
+              key: govuk_synthetic-test-app_github_pem_str
+              name: synthetic-test-app-github
+        - name: GITHUB_INSTALL_ID
+          valueFrom:
+            secretKeyRef:
+              key: govuk_synthetic-test-app_github_install_id
+              name: synthetic-test-app-github
+        - name: GITHUB_APP_ID
+          valueFrom:
+            secretKeyRef:
+              key: govuk_synthetic-test-app_github_app_id
               name: synthetic-test-app-github
       securityContext:
         allowPrivilegeEscalation: false
