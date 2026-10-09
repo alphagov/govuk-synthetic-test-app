@@ -18,7 +18,12 @@ func IncrementCanaryVersion(ctx context.Context, repoUrl, githubToken string) (s
 	}
 	defer os.RemoveAll(tempDir)
 
-	if err := clone(ctx, repoUrl, githubToken, tempDir); err != nil {
+	tokenUrl, err := addTokenToUrl(repoUrl, githubToken)
+	if err != nil {
+		return "", fmt.Errorf("failed to add token to url: %w", err)
+	}
+
+	if err := clone(ctx, tokenUrl, tempDir); err != nil {
 		return "", fmt.Errorf("failed to clone repo: %w", err)
 	}
 
@@ -43,7 +48,7 @@ func IncrementCanaryVersion(ctx context.Context, repoUrl, githubToken string) (s
 		return "", fmt.Errorf("failed to write new version: %w", err)
 	}
 
-	if err := commitAndPush(ctx, tempDir, repoUrl, githubToken, newVersion); err != nil {
+	if err := commitAndPush(ctx, tempDir, tokenUrl, newVersion); err != nil {
 		return "", fmt.Errorf("failed to commit and push: %w", err)
 	}
 

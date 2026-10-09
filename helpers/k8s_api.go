@@ -56,7 +56,7 @@ type K8sClient struct {
 	ClusterEndpoint string
 }
 
-func (k *K8sClient) Get(url string) (*http.Response, error) {
+func (k *K8sClient) Get(ctx context.Context, url string) (*http.Response, error) {
 	fullURL := strings.TrimPrefix(url, "/")
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", k.ClusterEndpoint, fullURL), nil)
 	if err != nil {
@@ -64,6 +64,8 @@ func (k *K8sClient) Get(url string) (*http.Response, error) {
 	}
 	req.Header.Set("Authorization", "Bearer "+k.Token)
 	req.Header.Set("Accept", "application/json")
+
+	req = req.WithContext(ctx)
 
 	return k.Client.Do(req)
 }
@@ -178,7 +180,7 @@ func GetK8sAPIData(ctx context.Context, accountID string, clusterID string, role
 		return nil, err
 	}
 
-	resp, err := client.Get(url)
+	resp, err := client.Get(ctx, url)
 	if err != nil {
 		err = fmt.Errorf("Error: %v, retrieving %v", err, url)
 		return nil, err

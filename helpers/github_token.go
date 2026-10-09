@@ -19,7 +19,6 @@ type GitHubTokenResponse struct {
 }
 
 func GetGitHubAppToken(ctx context.Context, appIdStr, installationId, pemKey string) (string, error) {
-	// 1. GitHub App ID must be an integer
 	fixedKey := strings.ReplaceAll(pemKey, `\n`, "\n")
 
 	appId, err := strconv.ParseInt(appIdStr, 10, 64)
@@ -32,7 +31,6 @@ func GetGitHubAppToken(ctx context.Context, appIdStr, installationId, pemKey str
 		return "", fmt.Errorf("failed to parse private key: %w", err)
 	}
 
-	// 2. Use explicit Unix timestamps (int64) to guarantee raw JSON numbers
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"iat": now.Add(-1 * time.Minute).Unix(),
@@ -47,7 +45,7 @@ func GetGitHubAppToken(ctx context.Context, appIdStr, installationId, pemKey str
 	}
 
 	apiURL := fmt.Sprintf("https://api.github.com/app/installations/%s/access_tokens", installationId)
-	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, nil) // Best practice: use ctx
+	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, nil)
 	if err != nil {
 		return "", err
 	}

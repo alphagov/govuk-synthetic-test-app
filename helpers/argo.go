@@ -30,7 +30,7 @@ type ArgoCDApplicationStatus struct {
 func GetArgoWorkflowStatus(ctx context.Context, k8sClient *K8sClient, namespace, labels string) (bool, error) {
 	encodedLabels := url.QueryEscape(labels)
 	url := fmt.Sprintf("/apis/argoproj.io/v1alpha1/namespaces/%s/workflows?labelSelector=%s", namespace, encodedLabels)
-	resp, err := k8sClient.Get(url)
+	resp, err := k8sClient.Get(ctx, url)
 	if err != nil {
 		fmt.Printf("Error reading resp: %v", resp)
 		return false, err
@@ -61,7 +61,7 @@ func GetArgoWorkflowStatus(ctx context.Context, k8sClient *K8sClient, namespace,
 
 func GetArgoCDApplicationStatus(ctx context.Context, k8sClient *K8sClient, namespace, appName string) (bool, error) {
 	url := fmt.Sprintf("/apis/argoproj.io/v1alpha1/namespaces/%s/applications/%s", namespace, appName)
-	resp, err := k8sClient.Get(url)
+	resp, err := k8sClient.Get(ctx, url)
 	if err != nil {
 		fmt.Printf("Error reading resp: %v", resp)
 		return false, err

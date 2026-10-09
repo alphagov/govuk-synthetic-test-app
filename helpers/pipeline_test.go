@@ -139,7 +139,7 @@ var _ = FDescribe("GIVEN the Argo + Github deployment pipeline THEN the canary a
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(deployOk).To(BeTrue(), "Argo Deploy Image workflow Failed")
 
-				sourceImageTagVal, err := helpers.GetImageTagFromChartRepo(env)
+				sourceImageTagVal, err := helpers.GetImageTagFromChartRepo(ctx, env)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(sourceImageTagVal).To(Equal(latestTag), "The value in github source code for the %s environment _does not match_ the latest release tag %s", env, latestTag)
 			}

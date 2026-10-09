@@ -151,8 +151,9 @@ func GetGHCRToken(ctx context.Context, image string) (string, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to perform GET request: %w", err)
 	}
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -173,7 +174,7 @@ func GetGHCRImageDigest(ctx context.Context, repo, tag, token string) (string, e
 
 	req, err := http.NewRequestWithContext(ctx, "GET", urlStr, nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create GET request: %w", err)
 	}
 
 	req.Header.Set("Accept", "application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json")
@@ -183,7 +184,7 @@ func GetGHCRImageDigest(ctx context.Context, repo, tag, token string) (string, e
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to perform GET request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -201,12 +202,18 @@ func GetGHCRImageDigest(ctx context.Context, repo, tag, token string) (string, e
 	return hex.EncodeToString(hash[:]), nil
 }
 
-func GetImageTagFromChartRepo(env string) (string, error) {
+func GetImageTagFromChartRepo(ctx context.Context, env string) (string, error) {
 	url := fmt.Sprintf("http://raw.githubusercontent.com/alphagov/govuk-helm-charts/refs/heads/main/charts/app-config/image-tags/%s/govuk-synthetic-test-app-canary", env)
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create GET request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to perform GET request: %w", err)
 	}
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {

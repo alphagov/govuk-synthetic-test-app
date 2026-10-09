@@ -32,7 +32,7 @@ type PodList struct {
 
 func GetPodImageDetails(ctx context.Context, k8sClient *K8sClient, namespace, appLabelSelector string) (tag string, sha string, err error) {
 	url := fmt.Sprintf("/api/v1/namespaces/%s/pods?labelSelector=%s", namespace, appLabelSelector)
-	resp, err := k8sClient.Get(url)
+	resp, err := k8sClient.Get(ctx, url)
 	if err != nil {
 		return "", "", err
 	}
@@ -69,7 +69,11 @@ func GetPodImageDetails(ctx context.Context, k8sClient *K8sClient, namespace, ap
 }
 
 func GetVersionFromApp(ctx context.Context) (string, error) {
-	resp, err := http.Get("http://govuk-synthetic-test-app-canary.apps.svc.cluster.local")
+	req, err := http.NewRequestWithContext(ctx, "GET", "http://govuk-synthetic-test-app-canary.apps.svc.cluster.local", nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create GET request: %w", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to perform GET request: %w", err)
 	}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"os/exec"
-	"strings"
 )
 
 func ConfigureGit(ctx context.Context) error {
@@ -22,13 +21,7 @@ func ConfigureGit(ctx context.Context) error {
 	return nil
 }
 
-func clone(ctx context.Context, repoUrl, githubToken, tempDir string) error {
-	u, err := url.Parse(repoUrl)
-	if err == nil && u.Host != "" && (strings.HasSuffix(u.Host, ".github.com") || u.Host == "github.com") {
-		u.User = url.UserPassword("x-access-token", githubToken)
-		repoUrl = u.String()
-	}
-
+func clone(ctx context.Context, repoUrl, tempDir string) error {
 	cmd := exec.CommandContext(ctx, "git", "clone", repoUrl, tempDir)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -38,14 +31,8 @@ func clone(ctx context.Context, repoUrl, githubToken, tempDir string) error {
 	return nil
 }
 
-func commitAndPush(ctx context.Context, repoDir, repoUrl, githubToken, sourceBranch string) error {
+func commitAndPush(ctx context.Context, repoDir, repoUrl, sourceBranch string) error {
 	targetBranch := "main"
-
-	u, err := url.Parse(repoUrl)
-	if err == nil && u.Host != "" && (strings.HasSuffix(u.Host, ".github.com") || u.Host == "github.com") {
-		u.User = url.UserPassword("x-access-token", githubToken)
-		repoUrl = u.String()
-	}
 
 	cmd := exec.CommandContext(ctx, "git", "-C", repoDir, "checkout", "-b", sourceBranch)
 	if output, err := cmd.CombinedOutput(); err != nil {
@@ -100,4 +87,15 @@ func mergeBranch(ctx context.Context, repoDir, sourceBranch, targetBranch string
 	}
 
 	return nil
+}
+
+func addTokenToUrl(repoUrl, githubToken string) (string, error) {
+	u, err := url.Parse(repoUrl)
+	if err != nil {
+		return "", err
+	}
+
+	u.User = url.UserPassword("x-access-token", githubToken)
+
+	return u.String(), nil
 }
