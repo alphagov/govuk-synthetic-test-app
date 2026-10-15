@@ -78,5 +78,5 @@ func GetGitHubAppToken(ctx context.Context, appIdStr, installationId, pemKey str
 		return "", fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	return tokenResp.Token, nil
+	return tokenResp.Token, err
 }

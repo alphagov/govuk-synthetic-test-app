@@ -202,7 +202,7 @@ func GetK8sAPIData(ctx context.Context, accountID string, clusterID string, role
 		return nil, fmt.Errorf("error got %v status, retrieving %v", resp.StatusCode, url)
 	}
 
-	return bodyText, nil
+	return bodyText, err
 }
 
 func GetPodList(ctx context.Context, accountID string, clusterID string, roleName string, namespace string) (*corev1.PodList, error) {

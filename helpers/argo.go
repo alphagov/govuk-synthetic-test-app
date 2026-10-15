@@ -63,7 +63,7 @@ func GetArgoWorkflowStatus(ctx context.Context, k8sClient *K8sClient, namespace,
 		return false, fmt.Errorf("there are no workflow items")
 	}
 
-	return workflow.Items[0].Status.Phase == "Succeeded", nil
+	return workflow.Items[0].Status.Phase == "Succeeded", err
 }
 
 func GetArgoCDApplicationStatus(ctx context.Context, k8sClient *K8sClient, namespace, appName string) (bool, error) {
@@ -99,5 +99,5 @@ func GetArgoCDApplicationStatus(ctx context.Context, k8sClient *K8sClient, names
 		return false, err
 	}
 
-	return app.Status.Sync.Status == "Synced" && app.Status.Health.Status == "Healthy", nil
+	return app.Status.Sync.Status == "Synced" && app.Status.Health.Status == "Healthy", err
 }

@@ -59,7 +59,12 @@ func IncrementCanaryVersion(ctx context.Context, repoUrl, githubToken string) (s
 		return "", fmt.Errorf("failed to commit and push: %w", err)
 	}
 
-	return getHeadSha(ctx, tempDir)
+	headSha, err := getHeadSha(ctx, tempDir)
+	if err != nil {
+		return "", err
+	}
+
+	return headSha, err
 }
 
 func incrementVersion(versionStr string) (string, error) {

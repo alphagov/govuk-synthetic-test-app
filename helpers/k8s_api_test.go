@@ -40,11 +40,9 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 
 				defer func() {
 					closeErr := resp.Body.Close()
-
-					if closeErr == nil {
-						Fail("Failed to close http response body")
-					}
+					Expect(closeErr).NotTo(HaveOccurred())
 				}()
+
 				Expect(resp.StatusCode).To(Equal(403))
 			},
 			Entry("for DELETE", "DELETE"),

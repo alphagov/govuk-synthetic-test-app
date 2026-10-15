@@ -75,7 +75,7 @@ func GetLatestGitHubReleaseTag(ctx context.Context, repo string) (string, error)
 		return "", err
 	}
 
-	return release.TagName, nil
+	return release.TagName, err
 }
 
 func GetLatestGitHubTagSHA(ctx context.Context, repo string) (string, error) {
@@ -117,7 +117,7 @@ func GetLatestGitHubTagSHA(ctx context.Context, repo string) (string, error) {
 		return "", fmt.Errorf("no tags found for repo %s", repo)
 	}
 
-	return tags[0].Commit.SHA, nil
+	return tags[0].Commit.SHA, err
 }
 
 func GetGithubWorkflowRunStatus(ctx context.Context, workflow, headSha, githubToken string) (*GitHubWorkflowRunsResponse, error) {
@@ -157,7 +157,7 @@ func GetGithubWorkflowRunStatus(ctx context.Context, workflow, headSha, githubTo
 		return nil, fmt.Errorf("no workflow runs found for head_sha %s", headSha)
 	}
 
-	return &runsResp, nil
+	return &runsResp, err
 }
 
 // GetGHCRToken fetches an anonymous authentication token for GHCR using the repository scope.
@@ -193,7 +193,7 @@ func GetGHCRToken(ctx context.Context, image string) (string, error) {
 		return "", fmt.Errorf("failed to decode GHCR token response: %w", err)
 	}
 
-	return tokenResp.Token, nil
+	return tokenResp.Token, err
 }
 
 func GetGHCRImageDigest(ctx context.Context, repo, tag, token string) (string, error) {
@@ -233,7 +233,7 @@ func GetGHCRImageDigest(ctx context.Context, repo, tag, token string) (string, e
 	}
 
 	hash := sha256.Sum256(body)
-	return hex.EncodeToString(hash[:]), nil
+	return hex.EncodeToString(hash[:]), err
 }
 
 func GetImageTagFromChartRepo(ctx context.Context, env string) (string, error) {
@@ -275,5 +275,5 @@ func GetImageTagFromChartRepo(ctx context.Context, env string) (string, error) {
 		return "", fmt.Errorf("image_tag not found in the YAML content")
 	}
 
-	return fileContent.ImageTag, nil
+	return fileContent.ImageTag, err
 }
