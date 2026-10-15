@@ -20,7 +20,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	stsTypes "github.com/aws/aws-sdk-go-v2/service/sts/types"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	corev1 "k8s.io/api/core/v1"
@@ -117,17 +116,18 @@ func GetK8sClient(ctx context.Context, accountID string, clusterID string, roleN
 
 	sourceAccount := sts.NewFromConfig(cfg)
 
-	rand.Seed(time.Now().UnixNano())
+	localRand := rand.New(rand.NewSource(time.Now().UnixNano()))
 	response, err := sourceAccount.AssumeRole(
 		ctx,
 		&sts.AssumeRoleInput{
 			RoleArn:         aws.String(assumeRoleARN),
-			RoleSessionName: aws.String("GOVUK-Synthetic-Test-Assumed-" + strconv.Itoa(10000+rand.Intn(25000))),
+			RoleSessionName: aws.String("GOVUK-Synthetic-Test-Assumed-" + strconv.Itoa(10000+localRand.Intn(25000))),
 		})
 	if err != nil {
 		return nil, err
 	}
-	var assumedRoleCreds *stsTypes.Credentials = response.Credentials
+
+	assumedRoleCreds := response.Credentials
 
 	cfg, err = config.LoadDefaultConfig(
 		ctx,
@@ -182,22 +182,27 @@ func GetK8sAPIData(ctx context.Context, accountID string, clusterID string, role
 
 	resp, err := client.Get(ctx, url)
 	if err != nil {
-		err = fmt.Errorf("Error: %v, retrieving %v", err, url)
-		return nil, err
+		return nil, fmt.Errorf("error: %v, retrieving %v", err, url)
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		closeErr := resp.Body.Close()
+
+		if err == nil {
+			err = closeErr
+		}
+	}()
+
 	bodyText, err := io.ReadAll(resp.Body)
 	if err != nil {
-		err = fmt.Errorf("Error: %v, retrieving %v", err, url)
-		return nil, err
+		return nil, fmt.Errorf("error: %v, retrieving %v", err, url)
 	}
 
 	if resp.StatusCode != 200 {
-		err = fmt.Errorf("Error got %v status, retrieving %v", resp.StatusCode, url)
-		return nil, err
+		return nil, fmt.Errorf("error got %v status, retrieving %v", resp.StatusCode, url)
 	}
 
-	return bodyText, nil
+	return bodyText, err
 }
 
 func GetPodList(ctx context.Context, accountID string, clusterID string, roleName string, namespace string) (*corev1.PodList, error) {

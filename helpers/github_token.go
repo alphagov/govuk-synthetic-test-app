@@ -59,7 +59,14 @@ func GetGitHubAppToken(ctx context.Context, appIdStr, installationId, pemKey str
 	if err != nil {
 		return "", fmt.Errorf("HTTP request failed: %w", err)
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		closeErr := resp.Body.Close()
+
+		if err == nil {
+			err = closeErr
+		}
+	}()
 
 	if resp.StatusCode != http.StatusCreated {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -71,5 +78,5 @@ func GetGitHubAppToken(ctx context.Context, appIdStr, installationId, pemKey str
 		return "", fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	return tokenResp.Token, nil
+	return tokenResp.Token, err
 }

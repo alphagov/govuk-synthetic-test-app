@@ -36,7 +36,14 @@ func GetPodImageDetails(ctx context.Context, k8sClient *K8sClient, namespace, ap
 	if err != nil {
 		return "", "", err
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		closeErr := resp.Body.Close()
+
+		if err == nil {
+			err = closeErr
+		}
+	}()
 
 	if resp.StatusCode != 200 {
 		return "", "", fmt.Errorf("failed to get pods: %s", resp.Status)
@@ -65,7 +72,7 @@ func GetPodImageDetails(ctx context.Context, k8sClient *K8sClient, namespace, ap
 	image := podList.Items[itemIdx].Status.ContainerStatuses[statusIdx].Image
 	imageId := podList.Items[itemIdx].Status.ContainerStatuses[statusIdx].ImageId
 
-	return strings.Split(image, ":")[1], strings.TrimPrefix(strings.Split(imageId, "@")[1], "sha256:"), nil
+	return strings.Split(image, ":")[1], strings.TrimPrefix(strings.Split(imageId, "@")[1], "sha256:"), err
 }
 
 func GetVersionFromApp(ctx context.Context) (string, error) {
@@ -77,7 +84,14 @@ func GetVersionFromApp(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to perform GET request: %w", err)
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		closeErr := resp.Body.Close()
+
+		if err == nil {
+			err = closeErr
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("failed to fetch URL: %s", resp.Status)
@@ -98,7 +112,7 @@ func GetVersionFromApp(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("image_tag not found in the YAML content")
 	}
 
-	return pageContent, nil
+	return pageContent, err
 }
 
 func getAppPodIndexes(podList PodList) (int, int) {
