@@ -1,7 +1,6 @@
 package helpers_test
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
