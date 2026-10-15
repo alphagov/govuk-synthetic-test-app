@@ -36,9 +36,8 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 				req.Header.Set("Accept", "application/yaml")
 
 				resp, err := client.Client.Do(req)
-				if err != nil {
-					GinkgoLogr.Error(err, "Error got %v status, retrieving %v with %v", resp.StatusCode, url, http_method)
-				}
+				Expect(err).NotTo(HaveOccurred())
+
 				defer func() {
 					closeErr := resp.Body.Close()
 
