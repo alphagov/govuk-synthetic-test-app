@@ -112,6 +112,7 @@ var _ = Describe("GIVEN the Argo + Github deployment pipeline THEN the canary ap
 	BeforeAll(func(ctx SpecContext) {
 		By("[BeforeAll] Triggering the deployment by committing and releasing a new app version")
 		githubAccessToken, err := helpers.GetGitHubAppToken(ctx, os.Getenv("GITHUB_APP_ID"), os.Getenv("GITHUB_INSTALL_ID"), os.Getenv("GITHUB_PEM_STR"))
+		Expect(err).NotTo(HaveOccurred())
 
 		headSha, err := helpers.IncrementCanaryVersion(ctx, "https://github.com/alphagov/govuk-synthetic-test-app-canary", githubAccessToken)
 		Expect(err).NotTo(HaveOccurred())

@@ -35,7 +35,14 @@ func GetArgoWorkflowStatus(ctx context.Context, k8sClient *K8sClient, namespace,
 		fmt.Printf("Error reading resp: %v", resp)
 		return false, err
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		closeErr := resp.Body.Close()
+
+		if err == nil {
+			err = closeErr
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -53,20 +60,29 @@ func GetArgoWorkflowStatus(ctx context.Context, k8sClient *K8sClient, namespace,
 	}
 
 	if len(workflow.Items) == 0 {
-		return false, fmt.Errorf("There are no workflow items")
+		return false, fmt.Errorf("there are no workflow items")
 	}
 
 	return workflow.Items[0].Status.Phase == "Succeeded", nil
 }
 
 func GetArgoCDApplicationStatus(ctx context.Context, k8sClient *K8sClient, namespace, appName string) (bool, error) {
+	var err error
+
 	url := fmt.Sprintf("/apis/argoproj.io/v1alpha1/namespaces/%s/applications/%s", namespace, appName)
 	resp, err := k8sClient.Get(ctx, url)
 	if err != nil {
 		fmt.Printf("Error reading resp: %v", resp)
 		return false, err
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		closeErr := resp.Body.Close()
+
+		if err == nil {
+			err = closeErr
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

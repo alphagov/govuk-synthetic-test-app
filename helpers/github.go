@@ -52,7 +52,14 @@ func GetLatestGitHubReleaseTag(ctx context.Context, repo string) (string, error)
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		closeErr := resp.Body.Close()
+
+		if err == nil {
+			err = closeErr
+		}
+	}()
 
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("failed to get latest GitHub release: %s", resp.Status)
@@ -83,7 +90,14 @@ func GetLatestGitHubTagSHA(ctx context.Context, repo string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		closeErr := resp.Body.Close()
+
+		if err == nil {
+			err = closeErr
+		}
+	}()
 
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("failed to get GitHub tags: %s", resp.Status)
@@ -121,7 +135,14 @@ func GetGithubWorkflowRunStatus(ctx context.Context, workflow, headSha, githubTo
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		closeErr := resp.Body.Close()
+
+		if err == nil {
+			err = closeErr
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -154,7 +175,13 @@ func GetGHCRToken(ctx context.Context, image string) (string, error) {
 		return "", fmt.Errorf("failed to perform GET request: %w", err)
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		closeErr := resp.Body.Close()
+
+		if err == nil {
+			err = closeErr
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -186,7 +213,14 @@ func GetGHCRImageDigest(ctx context.Context, repo, tag, token string) (string, e
 	if err != nil {
 		return "", fmt.Errorf("failed to perform GET request: %w", err)
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		closeErr := resp.Body.Close()
+
+		if err == nil {
+			err = closeErr
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -214,7 +248,13 @@ func GetImageTagFromChartRepo(ctx context.Context, env string) (string, error) {
 		return "", fmt.Errorf("failed to perform GET request: %w", err)
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		closeErr := resp.Body.Close()
+
+		if err == nil {
+			err = closeErr
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("failed to fetch URL: %s", resp.Status)

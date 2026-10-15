@@ -1,7 +1,6 @@
 package helpers_test
 
 import (
-	"fmt"
 	"net/http"
 
 	k8s_api "github.com/alphagov/govuk-synthetic-test-app/helpers"
@@ -38,9 +37,15 @@ var _ = Describe("Synthetic Test Assumed role", func() {
 
 				resp, err := client.Client.Do(req)
 				if err != nil {
-					err = fmt.Errorf("Error got %v status, retrieving %v with %v", resp.StatusCode, url, http_method)
+					GinkgoLogr.Error(err, "Error got %v status, retrieving %v with %v", resp.StatusCode, url, http_method)
 				}
-				defer resp.Body.Close()
+				defer func() {
+					closeErr := resp.Body.Close()
+
+					if closeErr == nil {
+						Fail("Failed to close http response body")
+					}
+				}()
 				Expect(resp.StatusCode).To(Equal(403))
 			},
 			Entry("for DELETE", "DELETE"),
