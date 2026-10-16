@@ -208,7 +208,7 @@ var _ = Describe("GIVEN the Argo + Github deployment pipeline THEN the canary ap
 			Eventually(verifyVersionDisplayedInApp).
 				WithContext(ctx).
 				WithArguments(latestTag).
-				WithTimeout(10 * time.Minute).
+				WithTimeout(15 * time.Minute).
 				WithPolling(1 * time.Minute).
 				Should(Succeed())
 
