@@ -96,7 +96,7 @@ var _ = Describe("GIVEN the Argo + Github deployment pipeline THEN the canary ap
 		tag, sha, err := helpers.GetPodImageDetails(ctx, envClient, appsNs, appLabelSelector)
 		g.Expect(err).NotTo(HaveOccurred())
 
-		By("[" + env + "] Deployed image tag: " + tag + ", SHA: +" + sha)
+		By("[" + env + "] Deployed image tag: " + tag + ", SHA: " + sha)
 
 		g.Expect(tag).To(Equal(latestTag), "Deployed image tag %s _does not match_ latest GitHub release tag %s", tag, latestTag)
 
