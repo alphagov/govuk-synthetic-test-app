@@ -37,7 +37,13 @@ const (
 	ASSUME_ROLE_NAME           string = "synthetic-test-assumer"
 )
 
-func CheckRunningInK8s() (bool, error) {
+type K8sClient struct {
+	Client          *http.Client
+	Token           string
+	ClusterEndpoint string
+}
+
+func checkRunningInK8s() (bool, error) {
 	if _, err := os.Stat(CERT_PATH); err != nil {
 		if os.IsNotExist(err) {
 			fmt.Printf("Can only run this code when inside a k8s pod\n")
@@ -49,24 +55,16 @@ func CheckRunningInK8s() (bool, error) {
 	return true, nil
 }
 
-type K8sClient struct {
-	Client          *http.Client
-	Token           string
-	ClusterEndpoint string
-}
-
 func (k *K8sClient) Get(ctx context.Context, url string) (*http.Response, error) {
-	fullURL := strings.TrimPrefix(url, "/")
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", k.ClusterEndpoint, fullURL), nil)
+	fullUrl := strings.TrimPrefix(url, "/")
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", k.ClusterEndpoint, fullUrl), nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+k.Token)
 	req.Header.Set("Accept", "application/json")
 
-	req = req.WithContext(ctx)
-
-	return k.Client.Do(req)
+	return k.Client.Do(req.WithContext(ctx))
 }
 
 func GetAwsAccountID(ctx context.Context) (string, error) {
@@ -85,10 +83,12 @@ func GetAwsAccountID(ctx context.Context) (string, error) {
 }
 
 func GetK8sClient(ctx context.Context, accountID string, clusterID string, roleName string) (*K8sClient, error) {
-	runningInK8s, err := CheckRunningInK8s()
+	runningInK8s, err := checkRunningInK8s()
 	if err != nil {
 		return nil, err
-	} else if !runningInK8s {
+	}
+
+	if !runningInK8s {
 		return nil, nil
 	}
 
@@ -141,9 +141,9 @@ func GetK8sClient(ctx context.Context, accountID string, clusterID string, roleN
 		return nil, err
 	}
 
-	eks_client := eks.NewFromConfig(cfg)
+	eksClient := eks.NewFromConfig(cfg)
 
-	cluster, err := eks_client.DescribeCluster(ctx, &eks.DescribeClusterInput{Name: aws.String(clusterID)})
+	cluster, err := eksClient.DescribeCluster(ctx, &eks.DescribeClusterInput{Name: aws.String(clusterID)})
 	if err != nil {
 		return nil, err
 	}
