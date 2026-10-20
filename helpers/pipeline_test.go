@@ -57,7 +57,7 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 	promReg.MustRegister(deploymentPipelineTestSuccess)
 })
 
-var _ = Describe("GIVEN the Argo + Github deployment pipeline THEN the canary application SHOULD be synced, healthy, and running the latest version from GitHub tag / container sha", Ordered, func() {
+var _ = Describe("GIVEN the Argo + Github deployment pipeline WHEN a release is triggered THEN the canary application SHOULD be synced, healthy, and running the latest version from GitHub tag / container sha", Ordered, func() {
 	verifyReleaseWorkflow := func(g Gomega, ctx context.Context, headSha, token string) {
 		releaseResp, err := helpers.GetGithubWorkflowRunStatus(ctx, "release.yml", headSha, token)
 		g.Expect(err).NotTo(HaveOccurred())

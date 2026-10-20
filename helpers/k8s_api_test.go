@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Synthetic Test Assumed role", func() {
+var _ = Describe("Synthetic Test Assumed role", Ordered, func() {
 	Context("when trying to perform a DELETE, PATCH, POST, PUT with the k8s api on the apps namespace", func() {
 		DescribeTable("returns a 403 error with invalid operation",
 			func(ctx SpecContext, http_method string) {
