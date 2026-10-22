@@ -17,6 +17,14 @@ func IncrementCanaryVersion(ctx context.Context, repoUrl, beforeCommitTag, githu
 		return "", fmt.Errorf("failed to create temp dir: %w", err)
 	}
 
+	defer func() {
+		closeErr := os.RemoveAll(tempDir)
+
+		if err == nil {
+			err = closeErr
+		}
+	}()
+
 	tokenUrl, err := addTokenToUrl(repoUrl, githubToken)
 	if err != nil {
 		return "", fmt.Errorf("failed to add token to url: %w", err)
@@ -50,14 +58,6 @@ func IncrementCanaryVersion(ctx context.Context, repoUrl, beforeCommitTag, githu
 	if err != nil {
 		return "", err
 	}
-
-	defer func() {
-		closeErr := os.RemoveAll(tempDir)
-
-		if err == nil {
-			err = closeErr
-		}
-	}()
 
 	return headSha, err
 }
