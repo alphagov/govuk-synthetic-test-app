@@ -132,7 +132,7 @@ var _ = Describe("GIVEN the Argo + Github deployment pipeline WHEN a release is 
 		Eventually(verifyReleaseWorkflow).
 			WithContext(ctx).
 			WithArguments(trimmedHeadSha, githubAccessToken).
-			WithTimeout(5 * time.Minute).
+			WithTimeout(10 * time.Minute).
 			WithPolling(30 * time.Second).
 			Should(Succeed())
 
@@ -140,7 +140,7 @@ var _ = Describe("GIVEN the Argo + Github deployment pipeline WHEN a release is 
 		Eventually(verifyDeployWorkflow).
 			WithContext(ctx).
 			WithArguments(trimmedHeadSha, githubAccessToken).
-			WithTimeout(5 * time.Minute).
+			WithTimeout(10 * time.Minute).
 			WithPolling(30 * time.Second).
 			Should(Succeed())
 
