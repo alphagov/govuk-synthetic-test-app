@@ -11,7 +11,7 @@ import (
 
 // IncrementCanaryVersion clones the canary repo, increments the version in the .version file,
 // and commits the change back to the repo. It returns the new commit SHA.
-func IncrementCanaryVersion(ctx context.Context, repoUrl, githubToken string) (string, error) {
+func IncrementCanaryVersion(ctx context.Context, repoUrl, beforeCommitTag, githubToken string) (string, error) {
 	tempDir, err := os.MkdirTemp(".", "canary-version-bump-*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp dir: %w", err)
@@ -36,12 +36,7 @@ func IncrementCanaryVersion(ctx context.Context, repoUrl, githubToken string) (s
 
 	versionFilePath := filepath.Join(tempDir, ".version")
 
-	content, err := os.ReadFile(versionFilePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read .version file: %w", err)
-	}
-
-	versionStr := strings.TrimSpace(string(content))
+	versionStr := strings.TrimSpace(string(beforeCommitTag))
 	if versionStr == "" {
 		return "", fmt.Errorf(".version file is empty")
 	}

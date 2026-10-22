@@ -114,8 +114,14 @@ var _ = Describe("GIVEN the Argo + Github deployment pipeline WHEN a release is 
 		githubAccessToken, err := helpers.GetGitHubAppToken(ctx, os.Getenv("GITHUB_APP_ID"), os.Getenv("GITHUB_INSTALL_ID"), os.Getenv("GITHUB_PEM_STR"))
 		Expect(err).NotTo(HaveOccurred())
 
-		headSha, err := helpers.IncrementCanaryVersion(ctx, "https://github.com/alphagov/govuk-synthetic-test-app-canary", githubAccessToken)
+		beforeCommitTag, err := helpers.GetLatestGitHubReleaseTag(ctx, repo)
 		Expect(err).NotTo(HaveOccurred())
+		By("[BeforeAll] Before bump, GitHub release tag: " + beforeCommitTag)
+
+		headSha, err := helpers.IncrementCanaryVersion(ctx, "https://github.com/alphagov/govuk-synthetic-test-app-canary", beforeCommitTag, githubAccessToken)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(err).To(BeNil())
+		Expect(headSha).ToNot(Equal(""))
 
 		trimmedHeadSha := strings.TrimSpace(headSha)
 
@@ -140,6 +146,7 @@ var _ = Describe("GIVEN the Argo + Github deployment pipeline WHEN a release is 
 
 		latestTag, err = helpers.GetLatestGitHubReleaseTag(ctx, repo)
 		Expect(err).NotTo(HaveOccurred())
+		Expect(latestTag).ToNot(Equal(beforeCommitTag))
 		By("[BeforeAll] Latest GitHub release tag: " + latestTag)
 
 		digest, err = helpers.GetGHCRImageDigest(ctx, containerPath, latestTag, token)
