@@ -1,4 +1,4 @@
-FROM golang:1.27.2-alpine3.24
+FROM golang:1.27.3-alpine3.24
 
 ARG USER=app
 ENV HOME=/home/$USER
