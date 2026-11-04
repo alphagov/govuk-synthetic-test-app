@@ -15,7 +15,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.37.1
 	k8s.io/apimachinery v0.37.1
-	sigs.k8s.io/aws-iam-authenticator v0.7.23
+	sigs.k8s.io/aws-iam-authenticator v0.7.24
 )
 
 require (
