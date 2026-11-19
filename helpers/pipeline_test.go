@@ -8,6 +8,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2/types"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
@@ -257,6 +258,34 @@ var _ = Describe("GIVEN the Argo + Github deployment pipeline WHEN a release is 
 				Expect(err).NotTo(HaveOccurred(), "Error pushing metrics to Prometheus Pushgateway")
 
 			}
+		}
+	})
+
+	ReportAfterSuite("Capture and report failures in BeforeSuite() and BeforeAll()", func(report Report) {
+		By("If there is a failure in BeforeSuite() or BeforeAll() the It tests are skipped and the ReportAfterEach() doesn't fire for each env, this block captures those suite-level failures")
+		suiteFailed := false
+		prometheusPushGatewayUrl := os.Getenv("PROMETHEUS_PUSHGATEWAY_URL")
+
+		if !report.SuiteSucceeded {
+			for _, spec := range report.SpecReports {
+				if spec.Failed() &&
+					(spec.Failure.FailureNodeType == types.NodeTypeBeforeAll ||
+						spec.Failure.FailureNodeType == types.NodeTypeBeforeSuite) {
+					suiteFailed = true
+					break
+				}
+			}
+
+			if suiteFailed {
+				deploymentPipelineTestSuccess.WithLabelValues(production).Set(0)
+				By("Pushing deployment_pipeline_test_success_metrics to Prometheus Pushgateway for " + production)
+
+				err := push.New(prometheusPushGatewayUrl, "deployment_pipeline_test_metrics").Gatherer(promReg).Push()
+				if err != nil {
+					fmt.Printf("Failed to push suite failure metrics to Prometheus: %v\n", err)
+				}
+			}
+
 		}
 	})
 })
